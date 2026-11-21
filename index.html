@@ -6,8 +6,17 @@
   <title>FreeCV — free resume builder with free PDF export</title>
   <meta name="description" content="Build a clean, ATS-friendly resume in your browser and download it as a PDF. Free, no sign-up, no paywall on export. Your data never leaves your device.">
   <meta name="theme-color" content="#FAF9F7">
-  <meta property="og:title" content="FreeCV — free resume builder">
-  <meta property="og:description" content="Free resume builder. No sign-up. PDF export is free, always.">
+  <link rel="canonical" href="https://cv.danishmasri.tech/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="FreeCV">
+  <meta property="og:url" content="https://cv.danishmasri.tech/">
+  <meta property="og:title" content="FreeCV — a resume builder that's actually free">
+  <meta property="og:description" content="Free PDF export. No sign-up. Your resume never leaves your browser.">
+  <meta property="og:image" content="https://cv.danishmasri.tech/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="FreeCV: a resume builder that's actually free, shown next to a sample resume">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231a1a1a'/%3E%3Cpath d='M10 10.5h12M10 16h12M10 21.5h8' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/app.css">
   <link rel="stylesheet" href="css/resume.css">
@@ -23,6 +32,8 @@
     <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 5.1A10 10 0 0112 5c6.5 0 10 7 10 7a17 17 0 01-3.2 4.1M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7a9.7 9.7 0 005.4-1.6M9.9 9.9a3 3 0 004.2 4.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
     <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
     <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5M4 9h11a5 5 0 010 10h-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5M20 9H9a5 5 0 000 10h3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-grip" viewBox="0 0 24 24"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
   </svg>
 
@@ -30,6 +41,27 @@
     <div class="brand">
       <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6" fill="currentColor"/><path d="M7 8h10M7 12h10M7 16h6" stroke="var(--bg)" stroke-width="2" stroke-linecap="round"/></svg>
       <span class="brand-name">FreeCV</span>
+      <span class="brand-sep" aria-hidden="true">/</span>
+      <details class="menu switcher" id="switcher">
+        <summary class="btn btn-text switcher-btn" aria-label="Switch resume">
+          <span class="switcher-name" id="switcher-name">Resume</span>
+          <svg class="ic" aria-hidden="true"><use href="#i-chev"/></svg>
+        </summary>
+        <div class="menu-list switcher-list">
+          <div class="menu-label">Your resumes in this browser</div>
+          <div id="switcher-items"></div>
+          <hr>
+          <button type="button" data-res="new">New blank resume</button>
+          <button type="button" data-res="example">New from example</button>
+          <button type="button" data-res="duplicate">Duplicate this resume</button>
+          <button type="button" data-res="rename">Rename…</button>
+          <button type="button" class="danger" data-res="delete">Delete this resume…</button>
+        </div>
+      </details>
+    </div>
+    <div class="history" role="group" aria-label="History">
+      <button type="button" class="icon-btn" id="btn-undo" aria-label="Undo" title="Undo (Ctrl+Z)" disabled><svg class="ic"><use href="#i-undo"/></svg></button>
+      <button type="button" class="icon-btn" id="btn-redo" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled><svg class="ic"><use href="#i-redo"/></svg></button>
     </div>
     <span class="save-status" id="save-status" role="status">Saved in this browser</span>
     <div class="actions">
@@ -40,8 +72,6 @@
         <div class="menu-list">
           <button type="button" class="show-sm" data-menu="import">Import backup…</button>
           <button type="button" class="show-sm" data-menu="export">Export backup</button>
-          <button type="button" data-menu="blank">Start blank</button>
-          <button type="button" data-menu="sample">Load example resume</button>
           <button type="button" data-menu="about">About FreeCV</button>
         </div>
       </details>
@@ -124,6 +154,21 @@
     <div class="dialog-actions">
       <button type="button" class="btn btn-text" data-close>Cancel</button>
     </div>
+  </dialog>
+
+  <dialog id="dlg-rename" class="dialog">
+    <form method="dialog" id="rename-form">
+      <h2>Rename resume</h2>
+      <label class="field">
+        <span class="field-label">Name</span>
+        <input class="input" id="rename-input" maxlength="60" autocomplete="off">
+      </label>
+      <p class="hint" style="margin-top:6px">Only you see this name, for telling versions apart (e.g. “Frontend roles”). It isn't printed on the resume.</p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-text" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
   </dialog>
 
   <dialog id="dlg-about" class="dialog">

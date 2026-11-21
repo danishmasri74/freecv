@@ -3,12 +3,14 @@
 A small, fast resume builder that is actually free, including the PDF export.
 
 - Runs entirely in the browser: no backend, no accounts, no tracking
-- Autosaves to `localStorage`; **Export** downloads a JSON backup, **Import** (or drag-and-drop) restores it
+- Autosaves to `localStorage`; **Export** downloads a JSON backup, **Import** (or drag-and-drop) adds it back as a resume
+- Keep several resumes in one browser (new, from example, duplicate, rename, delete with undo)
+- Undo / redo for every change (Ctrl+Z, Ctrl+Shift+Z or Ctrl+Y); typing is grouped into one step
 - PDF via the browser's print dialog (Save as PDF), so text stays selectable and ATS-readable
 - Four ATS-friendly templates (Harbor, Ledger, Atlas, Quiet), accent colour, A4 / Letter
 - Spacing (Compact / Normal / Roomy), text size (85–110%) and a one-click **Fit to 1 page**
 - Add your own sections: Certifications, Awards, Volunteering, Publications, Languages, Interests, or blank ones
-- No build step, no dependencies: about 88 KB of code, plus one 25–100 KB font for the chosen template
+- No build step, no dependencies: about 112 KB of unminified code (roughly 30 KB compressed over the wire), plus one 25–100 KB font for the chosen template
 
 ## Run locally
 
@@ -31,7 +33,14 @@ Then visit http://localhost:5178.
 | `js/data.js` | Data model, field definitions, example resume, import validation (`normalize`) |
 | `js/preview.js` | Resume data → resume HTML |
 | `js/editor.js` | Resume data → editor form |
-| `js/app.js` | State, autosave, events, export/import, print, backup reminder |
+| `js/app.js` | State, autosave, multi-resume storage, undo/redo, events, export/import, print, backup reminder |
+| `assets/og.png` | Share image (1200×630) used by the Open Graph / Twitter tags |
+| `tools/og-image.html` | Source for the share image; the regenerate command is in its comment |
+
+### Storage
+
+`freecv:index:v2` lists the resumes (`active`, `items[{ id, name, person, updatedAt }]`); each resume lives at `freecv:resume:<id>`.
+Data from the single-resume version (`freecv:resume:v1`) is migrated on first load and the old key is left untouched.
 
 Scripts are plain `<script>` files that share a `window.FreeCV` namespace (not ES modules), so the app also works from `file://`.
 
@@ -64,3 +73,7 @@ Scripts are plain `<script>` files that share a `window.FreeCV` namespace (not E
    `CNAME cv → <project>.pages.dev` at your DNS provider.
 
 Netlify and Vercel work the same way: static site, no build command, publish the repo root.
+
+## License
+
+[MIT](LICENSE). The bundled fonts are under the SIL Open Font License (see `fonts/LICENSE.md`).

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FreeCV share image source</title>
+<!--
+  Source for assets/og.png (1200×630). Regenerate with:
+  chrome --headless=new --window-size=1200,630 --hide-scrollbars --screenshot=assets/og.png http://127.0.0.1:5178/tools/og-image.html
+-->
+<style>
+  @font-face { font-family: "Source Sans 3"; src: url("../fonts/source-sans-3.woff2") format("woff2"); font-weight: 200 900; }
+  html, body { margin: 0; }
+  body { width: 1200px; height: 630px; overflow: hidden; background: #FAF9F7; color: #1A1A1A; font-family: "Source Sans 3", "Segoe UI", sans-serif; }
+  .wrap { display: flex; height: 100%; }
+  .left { flex: 0 0 600px; box-sizing: border-box; padding: 72px 0 64px 80px; display: flex; flex-direction: column; }
+  .brand { display: flex; align-items: center; gap: 14px; font-size: 30px; font-weight: 700; letter-spacing: -0.01em; }
+  .brand svg { width: 44px; height: 44px; }
+  h1 { margin: 56px 0 0; font-size: 58px; line-height: 1.04; font-weight: 700; letter-spacing: -0.025em; }
+  p { margin: 24px 0 0; font-size: 26px; line-height: 1.4; color: #4A463F; max-width: 460px; }
+  .url { margin-top: auto; font-size: 22px; font-weight: 600; color: #6B675F; }
+  .desk { flex: 1; background: #EFECE6; position: relative; overflow: hidden; }
+  .page {
+    position: absolute; left: 70px; top: 64px; width: 470px; height: 640px;
+    background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.06), 0 24px 60px rgba(40,30,10,.16);
+    padding: 40px 40px; box-sizing: border-box; font-size: 11px; line-height: 1.45; color: #1A1A1A;
+  }
+  .page .head { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 10px; border-bottom: 1.5px solid #1A1A1A; }
+  .page .name { font-size: 26px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.05; }
+  .page .role { font-size: 12px; color: #444; margin-top: 3px; }
+  .page .contact { text-align: right; font-size: 9px; color: #444; line-height: 1.5; }
+  .page h2 { margin: 16px 0 8px; font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #1F4E79; padding-bottom: 3px; border-bottom: 1px solid #D4D4D4; }
+  .row { display: grid; grid-template-columns: 92px 1fr; column-gap: 14px; margin-bottom: 9px; }
+  .row .when { font-size: 9.5px; font-weight: 600; color: #333; }
+  .row .where { font-size: 9.5px; color: #5C5C5C; }
+  .row b { font-size: 12.5px; display: block; }
+  .row .org { color: #1F4E79; font-weight: 600; }
+  .row ul { margin: 3px 0 0; padding-left: 13px; }
+  .badge {
+    position: absolute; right: 34px; bottom: 40px; transform: rotate(-4deg);
+    background: #1A1A1A; color: #fff; font-size: 26px; font-weight: 700; padding: 14px 22px; border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.25);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="left">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6" fill="#1A1A1A"/><path d="M7 8h10M7 12h10M7 16h6" stroke="#FAF9F7" stroke-width="2" stroke-linecap="round"/></svg>
+      FreeCV
+    </div>
+    <h1>A resume builder that's actually free.</h1>
+    <p>Free PDF export. No sign-up. Your resume never leaves your browser.</p>
+    <div class="url">cv.danishmasri.tech</div>
+  </div>
+  <div class="desk">
+    <div class="page">
+      <div class="head">
+        <div><div class="name">Aisyah Rahman</div><div class="role">Software Engineer · Frontend</div></div>
+        <div class="contact">Kuala Lumpur, Malaysia<br>aisyah.rahman@example.com<br>github.com/aisyah-example</div>
+      </div>
+      <h2>Experience</h2>
+      <div class="row">
+        <div><div class="when">Mar 2023 – Present</div><div class="where">Kuala Lumpur</div></div>
+        <div><b>Senior Frontend Engineer</b><span class="org">Lumen Pay</span>
+          <ul><li>Rebuilt the merchant dashboard, cutting load time from 4.1s to 1.3s</li><li>Created a component library used by 6 teams</li></ul></div>
+      </div>
+      <div class="row">
+        <div><div class="when">Jul 2020 – Feb 2023</div><div class="where">Petaling Jaya</div></div>
+        <div><b>Frontend Engineer</b><span class="org">Kedai.co</span>
+          <ul><li>Built search pages serving 2M monthly visitors</li><li>Improved mobile conversion by 9%</li></ul></div>
+      </div>
+      <h2>Education</h2>
+      <div class="row">
+        <div><div class="when">2016 – 2020</div><div class="where">Johor Bahru</div></div>
+        <div><b>Bachelor of Computer Science</b><span class="org">Universiti Teknologi Malaysia</span></div>
+      </div>
+      <h2>Skills</h2>
+      <div class="row"><div class="when">Languages</div><div>TypeScript, JavaScript, HTML, CSS, SQL</div></div>
+    </div>
+    <div class="badge">No paywall. Ever.</div>
+  </div>
+</div>
+</body>
+</html>

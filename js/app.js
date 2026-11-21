@@ -3,8 +3,10 @@
   'use strict';
 
   var FreeCV = window.FreeCV;
-  var KEY = 'freecv:resume:v1';
+  var INDEX_KEY = 'freecv:index:v2';     // { active, items: [{ id, name, person, updatedAt }] }
+  var LEGACY_KEY = 'freecv:resume:v1';   // single-resume storage before v2 (migrated, then left alone)
   var META_KEY = 'freecv:meta:v1';
+  function resumeKey(id) { return 'freecv:resume:' + id; }
   var DAY = 864e5;
   var MM = 96 / 25.4; // CSS px per mm
 
@@ -33,11 +35,37 @@
   var meta = readJSON(META_KEY) || {};
   function saveMeta() { writeJSON(META_KEY, meta); }
 
-  var state = null;
-  var stored = readJSON(KEY);
-  if (stored) { try { state = FreeCV.normalize(stored); } catch (e) { state = null; } }
-  if (!state) state = FreeCV.sample();
+  /* ---------- Several resumes per browser ---------- */
+
+  var ID_RE = /^r[a-z0-9]{4,20}$/;
+  function loadResume(id) {
+    var raw = readJSON(resumeKey(id));
+    try { return raw ? FreeCV.normalize(raw) : null; } catch (e) { return null; }
+  }
+
+  var index = readJSON(INDEX_KEY);
+  if (index && Array.isArray(index.items)) {
+    index.items = index.items.filter(function (it) { return it && ID_RE.test(it.id); });
+  }
+  if (!index || !Array.isArray(index.items) || !index.items.length) {
+    // First visit, or data from the single-resume version: move it into the new layout.
+    var legacy = null;
+    try { legacy = readJSON(LEGACY_KEY) ? FreeCV.normalize(readJSON(LEGACY_KEY)) : null; } catch (e) { legacy = null; }
+    var firstId = 'r' + FreeCV.uid();
+    index = { active: firstId, items: [{ id: firstId, name: '', person: '', updatedAt: Date.now() }] };
+    writeJSON(resumeKey(firstId), legacy || FreeCV.sample());
+    writeJSON(INDEX_KEY, index);
+  }
+  if (!index.items.some(function (it) { return it.id === index.active; })) index.active = index.items[0].id;
+
+  var state = loadResume(index.active) || FreeCV.sample();
   try { localStorage.setItem('freecv:probe', '1'); localStorage.removeItem('freecv:probe'); } catch (e) { storageOk = false; }
+
+  function activeEntry() { return index.items.find(function (it) { return it.id === index.active; }); }
+  function displayName(entry) {
+    var person = entry.id === index.active ? (state.personal.name || '').trim() : entry.person;
+    return (entry.name || '').trim() || person || 'Untitled resume';
+  }
 
   var ui = { openEntries: new Set(), active: 'personal' };
 
@@ -53,14 +81,18 @@
   }
   function flushSave() {
     clearTimeout(saveTimer);
-    var ok = writeJSON(KEY, state);
+    var ok = writeJSON(resumeKey(index.active), state);
+    var entry = activeEntry();
+    if (entry) { entry.person = (state.personal.name || '').trim(); entry.updatedAt = Date.now(); }
+    ok = writeJSON(INDEX_KEY, index) && ok;
     if (ok) setStatus('Saved in this browser');
     else setStatus('Not saved: storage is blocked', true);
   }
   window.addEventListener('pagehide', flushSave);
   document.addEventListener('visibilitychange', function () { if (document.hidden) flushSave(); });
 
-  function edited() {
+  // kind 'typing' groups keystrokes into one undo step; anything else is its own step.
+  function edited(kind) {
     var now = Date.now();
     if (!meta.firstEditAt) meta.firstEditAt = now;
     meta.lastEditAt = now;
@@ -68,7 +100,85 @@
     save();
     schedulePreview();
     renderBackup();
+    if (kind === 'typing') {
+      clearTimeout(hist.timer);
+      hist.timer = setTimeout(commitHistory, 700);
+    } else {
+      commitHistory();
+    }
   }
+
+  /* ---------- Undo / redo (whole-resume snapshots, per resume) ---------- */
+
+  var hist = { past: [], future: [], current: JSON.stringify(state), timer: 0 };
+  var HIST_MAX = 100;
+
+  function commitHistory() {
+    clearTimeout(hist.timer);
+    var now = JSON.stringify(state);
+    if (now === hist.current) return;
+    hist.past.push(hist.current);
+    if (hist.past.length > HIST_MAX) hist.past.shift();
+    hist.current = now;
+    hist.future = [];
+    renderHistoryButtons();
+  }
+  function resetHistory() {
+    clearTimeout(hist.timer);
+    hist.past = []; hist.future = []; hist.current = JSON.stringify(state);
+    renderHistoryButtons();
+  }
+
+  // Remember which field had focus so undo/redo can put the cursor back.
+  function focusSelector() {
+    var el = document.activeElement;
+    if (!el || !els.editor.contains(el) || !/^(INPUT|TEXTAREA)$/.test(el.tagName)) return null;
+    var sel = '';
+    ['scope', 'sec', 'item', 'field', 'link', 'line'].forEach(function (k) {
+      if (el.dataset[k] != null) sel += '[data-' + k + '="' + el.dataset[k] + '"]';
+    });
+    return sel ? { sel: sel, caret: null } : null;
+  }
+
+  function restoreSnapshot(json) {
+    var focus = focusSelector();
+    state = JSON.parse(json);
+    hist.current = json;
+    applySettings();
+    renderOutline();
+    renderEditor(focus);
+    renderPreview();
+    renderSwitcher();
+    save();
+    renderHistoryButtons();
+  }
+  function undo() {
+    commitHistory();
+    if (!hist.past.length) return;
+    hist.future.push(hist.current);
+    restoreSnapshot(hist.past.pop());
+  }
+  function redo() {
+    commitHistory();
+    if (!hist.future.length) return;
+    hist.past.push(hist.current);
+    restoreSnapshot(hist.future.pop());
+  }
+  function renderHistoryButtons() {
+    var u = $('btn-undo'), r = $('btn-redo');
+    if (u) u.disabled = !hist.past.length && JSON.stringify(state) === hist.current;
+    if (r) r.disabled = !hist.future.length;
+  }
+  $('btn-undo').addEventListener('click', undo);
+  $('btn-redo').addEventListener('click', redo);
+
+  document.addEventListener('keydown', function (e) {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    if (e.target.closest && e.target.closest('dialog')) return; // let dialogs use native undo
+    var k = e.key.toLowerCase();
+    if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+    else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); redo(); }
+  });
 
   /* ---------- Lookups ---------- */
 
@@ -123,6 +233,7 @@
       if (done) return;
       done = true; previewQueued = false;
       renderPreview(); renderOutlineCounts();
+      $('switcher-name').textContent = displayName(activeEntry()); // name may follow the person's name
     };
     requestAnimationFrame(run);
     setTimeout(run, 150);
@@ -196,7 +307,6 @@
   function fitToOnePage() {
     var s = state.settings;
     var before = { spacing: s.spacing, size: s.size };
-    snapshot();
     var fits = function () { applyScale(); return measurePages() === 1; };
     var ok = false;
 
@@ -289,22 +399,21 @@
 
   /* ---------- Toast with optional undo ---------- */
 
-  var toastTimer = 0, undoSnapshot = null;
-  function toast(msg, undoable) {
+  // onUndo: true → the toast's Undo button runs the normal undo; a function → runs that instead.
+  var toastTimer = 0, toastUndo = null;
+  function toast(msg, onUndo) {
     els.toastText.textContent = msg;
-    els.toastAction.hidden = !undoable;
+    toastUndo = onUndo === true ? undo : (typeof onUndo === 'function' ? onUndo : null);
+    els.toastAction.hidden = !toastUndo;
     els.toast.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { els.toast.hidden = true; undoSnapshot = null; }, undoable ? 7000 : 3000);
+    toastTimer = setTimeout(function () { els.toast.hidden = true; toastUndo = null; }, toastUndo ? 7000 : 3000);
   }
-  function snapshot() { undoSnapshot = JSON.stringify(state); }
   els.toastAction.addEventListener('click', function () {
-    if (!undoSnapshot) return;
-    state = JSON.parse(undoSnapshot);
-    undoSnapshot = null;
+    var fn = toastUndo;
+    toastUndo = null;
     els.toast.hidden = true;
-    renderAll();
-    edited();
+    if (fn) fn();
   });
 
   /* ---------- Bullet rows (newline-separated text edited one line per row) ---------- */
@@ -400,7 +509,7 @@
         sec[d.field] = v;
       }
     }
-    edited();
+    edited('typing');
   });
 
   /* ---------- Editor: buttons ---------- */
@@ -454,7 +563,6 @@
         break;
 
       case 'del-item':
-        snapshot();
         idx = sec.items.findIndex(function (i) { return i.id === d.item; });
         sec.items.splice(idx, 1);
         toast('Entry deleted.', true);
@@ -479,7 +587,6 @@
         return;
 
       case 'del-sec':
-        snapshot();
         state.sections.splice(state.sections.indexOf(sec), 1);
         toast('“' + (sec.title || 'Section') + '” deleted.', true);
         break;
@@ -650,7 +757,7 @@
     state.settings.accent = e.target.value;
     els.resume.style.setProperty('--accent', e.target.value);
     e.target.parentElement.style.background = e.target.value;
-    edited();
+    edited('typing');
   });
   els.swatches.addEventListener('change', function (e) {
     if (e.target.id === 'accent-custom') renderSwatches();
@@ -691,16 +798,11 @@
       var next;
       try { next = FreeCV.normalize(JSON.parse(reader.result)); }
       catch (err) { toast(err instanceof SyntaxError ? 'That file is not valid JSON.' : err.message); return; }
-      if (!confirm('Replace the resume in the editor with “' + (next.personal.name || file.name) + '”?\n\nYou can undo this right after.')) return;
-      snapshot();
-      state = next;
-      ui.openEntries.clear();
-      renderAll();
-      edited();
+      // Imports never overwrite: the file becomes a new resume in the switcher.
       meta.lastExportAt = Date.now(); // the imported file is itself a backup
       saveMeta();
-      renderBackup();
-      toast('Resume imported.', true);
+      createResume(next, '');
+      toast('Imported “' + displayName(activeEntry()) + '” as a new resume.');
     };
     reader.onerror = function () { toast('Could not read that file.'); };
     reader.readAsText(file);
@@ -731,22 +833,125 @@
     if (m === 'import') els.file.click();
     else if (m === 'export') exportJSON();
     else if (m === 'about') els.dlgAbout.showModal();
-    else if (m === 'blank' || m === 'sample') {
-      snapshot();
-      state = m === 'blank' ? FreeCV.blank(state.settings) : FreeCV.sample(state.settings);
-      ui.openEntries.clear();
-      if (m === 'blank') state.sections.forEach(function (s) { (s.items || []).forEach(function (i) { ui.openEntries.add(i.id); }); });
-      renderAll();
-      edited();
-      toast(m === 'blank' ? 'Started a blank resume.' : 'Example resume loaded.', true);
-    }
   });
+
+  // Close any open dropdown (More, resume switcher) on outside click or Escape.
+  var menus = [els.menu, $('switcher')];
   document.addEventListener('click', function (e) {
-    if (els.menu.open && !els.menu.contains(e.target)) els.menu.open = false;
+    menus.forEach(function (m) { if (m.open && !m.contains(e.target)) m.open = false; });
   });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && els.menu.open) { els.menu.open = false; els.menu.querySelector('summary').focus(); }
+    if (e.key !== 'Escape') return;
+    menus.forEach(function (m) { if (m.open) { m.open = false; m.querySelector('summary').focus(); } });
   });
+
+  /* ---------- Resume switcher: new, duplicate, rename, delete, switch ---------- */
+
+  var switcher = $('switcher');
+  switcher.addEventListener('toggle', function () { if (switcher.open) { flushSave(); renderSwitcher(); } });
+
+  function ago2(t) {
+    var mins = Math.round((Date.now() - t) / 60e3);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + ' min ago';
+    var hrs = Math.round(mins / 60);
+    if (hrs < 24) return hrs + ' h ago';
+    return ago(t);
+  }
+
+  function renderSwitcher() {
+    $('switcher-name').textContent = displayName(activeEntry());
+    var items = index.items.slice().sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
+    $('switcher-items').innerHTML = items.map(function (it) {
+      var cur = it.id === index.active;
+      return '<button type="button" class="sw-item' + (cur ? ' is-current' : '') + '" data-res-id="' + it.id + '"' + (cur ? ' aria-current="true"' : '') + '>' +
+        '<span class="sw-name">' + FreeCV.esc(displayName(it)) + '</span>' +
+        '<span class="sw-meta">' + (cur ? 'Editing now' : 'Edited ' + ago2(it.updatedAt || 0)) + '</span></button>';
+    }).join('');
+    switcher.querySelector('[data-res="delete"]').disabled = index.items.length < 2;
+  }
+
+  // opts.noSave: don't save the current resume first (it was just deleted).
+  function openResume(id, opts) {
+    if (id === index.active) return;
+    if (!(opts && opts.noSave)) flushSave();
+    var next = loadResume(id);
+    if (!next) { toast('Could not open that resume.'); return; }
+    index.active = id;
+    writeJSON(INDEX_KEY, index);
+    state = next;
+    ui.openEntries.clear();
+    ui.active = 'personal';
+    resetHistory();
+    renderAll();
+    renderSwitcher();
+    els.editor.scrollTop = 0;
+  }
+
+  function createResume(data, name) {
+    flushSave();
+    var id = 'r' + FreeCV.uid();
+    index.items.push({ id: id, name: name || '', person: (data.personal.name || '').trim(), updatedAt: Date.now() });
+    if (!writeJSON(resumeKey(id), data)) { toast('Could not save a new resume: storage is blocked or full.'); }
+    writeJSON(INDEX_KEY, index);
+    openResume(id);
+  }
+
+  switcher.addEventListener('click', function (e) {
+    var item = e.target.closest('[data-res-id]');
+    var act = e.target.closest('[data-res]');
+    if (!item && !act) return;
+    switcher.open = false;
+    if (item) { openResume(item.dataset.resId); return; }
+
+    var a = act.dataset.res;
+    if (a === 'new') {
+      createResume(FreeCV.blank(Object.assign({}, state.settings)), '');
+      state.sections.forEach(function (s) { (s.items || []).forEach(function (i) { ui.openEntries.add(i.id); }); });
+      renderEditor({ sel: '[data-scope="personal"][data-field="name"]' });
+      toast('New blank resume created.');
+    } else if (a === 'example') {
+      createResume(FreeCV.sample(Object.assign({}, state.settings)), 'Example');
+      toast('Example resume added.');
+    } else if (a === 'duplicate') {
+      createResume(JSON.parse(JSON.stringify(state)), 'Copy of ' + displayName(activeEntry()));
+      toast('Duplicated. You are now editing the copy.');
+    } else if (a === 'rename') {
+      $('rename-input').value = activeEntry().name || '';
+      $('rename-input').placeholder = displayName(activeEntry());
+      $('dlg-rename').showModal();
+    } else if (a === 'delete') {
+      deleteResume(index.active);
+    }
+  });
+
+  $('rename-form').addEventListener('submit', function () {
+    activeEntry().name = $('rename-input').value.trim().slice(0, 60);
+    writeJSON(INDEX_KEY, index);
+    renderSwitcher();
+  });
+
+  function deleteResume(id) {
+    if (index.items.length < 2) return;
+    var entry = index.items.find(function (it) { return it.id === id; });
+    var name = displayName(entry);
+    if (!confirm('Delete “' + name + '”?\n\nIt is removed from this browser. Export it first if you might want it back later.')) return;
+    flushSave();
+    var data = readJSON(resumeKey(id));
+    var pos = index.items.indexOf(entry);
+    index.items.splice(pos, 1);
+    try { localStorage.removeItem(resumeKey(id)); } catch (e) { /* ignore */ }
+    var next = index.items.slice().sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); })[0];
+    index.active = '';
+    openResume(next.id, { noSave: true });
+    toast('“' + name + '” deleted.', function () {
+      // Undo: put the resume back exactly as it was and open it again.
+      index.items.splice(Math.min(pos, index.items.length), 0, entry);
+      writeJSON(resumeKey(id), data);
+      writeJSON(INDEX_KEY, index);
+      openResume(id);
+    });
+  }
 
   /* ---------- Dialogs ---------- */
 
@@ -808,5 +1013,7 @@
   var exp = secById('experience');
   if (exp && exp.items[0] && !meta.firstEditAt) ui.openEntries.add(exp.items[0].id);
   renderAll();
+  renderSwitcher();
+  renderHistoryButtons();
   if (!storageOk) setStatus('Not saved: storage is blocked', true);
 })();
