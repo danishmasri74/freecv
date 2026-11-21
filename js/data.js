@@ -4,6 +4,9 @@
 
   var FreeCV = (window.FreeCV = window.FreeCV || {});
 
+  // Section titles shown in the outline and editor for sections with no editable title.
+  FreeCV.PERSONAL_TITLE = 'Personal details';
+
   FreeCV.SCHEMA_VERSION = 1;
 
   FreeCV.uid = function () {
@@ -37,9 +40,10 @@
         { key: 'start', label: 'Start', placeholder: 'Jan 2022' },
         { key: 'end', label: 'End', placeholder: 'Present' },
         { key: 'location', label: 'Location', wide: true, placeholder: 'Kuala Lumpur (hybrid)' },
-        { key: 'bullets', label: 'What you did', area: true, hint: 'One point per line. Start with a verb; add numbers where you can.' }
+        { key: 'bullets', label: 'What you did', list: true, placeholder: 'Led a project that…', addLabel: 'Add a point', hint: 'Start with a verb; add numbers where you can. Press Enter for a new point.' }
       ],
-      label: function (it) { return [it.role, it.org].filter(Boolean).join(' · '); }
+      label: function (it) { return [it.role, it.org].filter(Boolean).join(' · '); },
+      meta: function (it) { return dateRange(it.start, it.end); }
     },
     education: {
       defaultTitle: 'Education',
@@ -52,7 +56,8 @@
         { key: 'location', label: 'Location', wide: true },
         { key: 'details', label: 'Details (optional)', area: true, hint: 'Grades, honours, thesis. Lines starting with “-” become bullets.' }
       ],
-      label: function (it) { return [it.degree, it.school].filter(Boolean).join(' · '); }
+      label: function (it) { return [it.degree, it.school].filter(Boolean).join(' · '); },
+      meta: function (it) { return dateRange(it.start, it.end); }
     },
     skills: {
       defaultTitle: 'Skills',
@@ -73,9 +78,15 @@
         { key: 'link', label: 'Link (optional)', wide: true, placeholder: 'github.com/you/project' },
         { key: 'description', label: 'Description', area: true, hint: 'Lines starting with “-” become bullets.' }
       ],
-      label: function (it) { return it.name; }
+      label: function (it) { return it.name; },
+      meta: function (it) { return (it.date || '').trim(); }
     }
   };
+
+  function dateRange(a, b) {
+    a = (a || '').trim(); b = (b || '').trim();
+    return a && b ? a + ' – ' + b : a || b;
+  }
 
   FreeCV.SECTION_ORDER = ['summary', 'experience', 'education', 'skills', 'projects'];
 

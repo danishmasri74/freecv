@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>FreeCV — free resume builder with free PDF export</title>
   <meta name="description" content="Build a clean, ATS-friendly resume in your browser and download it as a PDF. Free, no sign-up, no paywall on export. Your data never leaves your device.">
-  <meta name="theme-color" content="#1f3a5f">
+  <meta name="theme-color" content="#FAF9F7">
   <meta property="og:title" content="FreeCV — free resume builder">
   <meta property="og:description" content="Free resume builder. No sign-up. PDF export is free, always.">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f3a5f'/%3E%3Cpath d='M10 9h12M10 14h12M10 19h8' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231a1a1a'/%3E%3Cpath d='M10 10.5h12M10 16h12M10 21.5h8' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/app.css">
   <link rel="stylesheet" href="css/resume.css">
   <style id="page-style">@page { size: A4; margin: 15mm; }</style>
@@ -18,90 +18,79 @@
     <symbol id="i-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
     <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
     <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 5.1A10 10 0 0112 5c6.5 0 10 7 10 7a17 17 0 01-3.2 4.1M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7a9.7 9.7 0 005.4-1.6M9.9 9.9a3 3 0 004.2 4.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
-    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
     <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-pdf" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-grip" viewBox="0 0 24 24"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
   </svg>
 
   <header class="topbar">
     <div class="brand">
-      <span class="logo" aria-hidden="true"></span>
+      <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6" fill="currentColor"/><path d="M7 8h10M7 12h10M7 16h6" stroke="var(--bg)" stroke-width="2" stroke-linecap="round"/></svg>
       <span class="brand-name">FreeCV</span>
-      <span class="brand-tag">Free resume builder. Free PDF. No sign-up.</span>
     </div>
-
-    <div class="controls" role="group" aria-label="Design">
-      <label class="ctl">
-        <span class="ctl-label">Template</span>
-        <select id="template">
-          <option value="classic">Classic</option>
-          <option value="modern">Modern</option>
-          <option value="minimal">Minimal</option>
-        </select>
-      </label>
-      <div class="ctl">
-        <span class="ctl-label" id="accent-label">Accent</span>
-        <div class="swatches" id="swatches" role="radiogroup" aria-labelledby="accent-label"></div>
-      </div>
-      <label class="ctl">
-        <span class="ctl-label">Paper</span>
-        <select id="paper">
-          <option value="a4">A4</option>
-          <option value="letter">Letter</option>
-        </select>
-      </label>
-    </div>
-
+    <span class="save-status" id="save-status" role="status">Saved in this browser</span>
     <div class="actions">
-      <button type="button" class="btn" id="btn-import">Import</button>
-      <button type="button" class="btn" id="btn-export">Export</button>
+      <button type="button" class="btn btn-text hide-sm" id="btn-import">Import</button>
+      <button type="button" class="btn btn-text hide-sm" id="btn-export">Export</button>
       <details class="menu" id="more-menu">
-        <summary class="btn" aria-label="More options">More</summary>
+        <summary class="btn btn-text" aria-label="More options">More</summary>
         <div class="menu-list">
-          <button type="button" class="mobile-only" data-menu="import">Import JSON…</button>
-          <button type="button" class="mobile-only" data-menu="export">Export JSON</button>
+          <button type="button" class="show-sm" data-menu="import">Import backup…</button>
+          <button type="button" class="show-sm" data-menu="export">Export backup</button>
           <button type="button" data-menu="blank">Start blank</button>
           <button type="button" data-menu="sample">Load example resume</button>
           <button type="button" data-menu="about">About FreeCV</button>
         </div>
       </details>
-      <button type="button" class="btn btn-primary" id="btn-pdf"><svg class="ic"><use href="#i-pdf"/></svg>Download PDF</button>
+      <button type="button" class="btn btn-primary" id="btn-pdf">Download PDF</button>
       <input type="file" id="file-import" accept="application/json,.json" hidden>
     </div>
   </header>
 
-  <div class="banner" id="banner" hidden>
-    <p id="banner-text"></p>
-    <div class="banner-actions">
-      <button type="button" class="btn btn-small btn-primary" id="banner-export">Export backup</button>
-      <button type="button" class="btn btn-small btn-ghost" id="banner-dismiss">Later</button>
-    </div>
-  </div>
-
   <nav class="tabs" role="tablist" aria-label="View">
-    <button type="button" role="tab" id="tab-edit" aria-selected="true" data-view="edit">Edit</button>
-    <button type="button" role="tab" id="tab-preview" aria-selected="false" data-view="preview">Preview</button>
+    <button type="button" role="tab" aria-selected="true" data-view="edit">Edit</button>
+    <button type="button" role="tab" aria-selected="false" data-view="preview">Preview</button>
   </nav>
 
   <main class="workspace" id="workspace" data-view="edit">
+    <nav class="outline" aria-label="Sections">
+      <div class="outline-label">Sections</div>
+      <ol class="outline-list" id="outline-list"></ol>
+      <p class="outline-hint">Drag to reorder</p>
+      <div class="backup" data-backup></div>
+    </nav>
+
     <section class="editor" id="editor" aria-label="Resume editor"></section>
 
     <section class="preview" id="preview" aria-label="Resume preview">
-      <div class="preview-meta" id="preview-meta"></div>
+      <div class="design-bar">
+        <div class="seg" role="radiogroup" aria-label="Template" id="template-seg">
+          <button type="button" role="radio" data-template="classic">Classic</button>
+          <button type="button" role="radio" data-template="modern">Modern</button>
+          <button type="button" role="radio" data-template="minimal">Minimal</button>
+        </div>
+        <div class="swatches" id="swatches" role="radiogroup" aria-label="Accent colour"></div>
+        <div class="seg" role="radiogroup" aria-label="Paper size" id="paper-seg">
+          <button type="button" role="radio" data-paper="a4">A4</button>
+          <button type="button" role="radio" data-paper="letter">Letter</button>
+        </div>
+      </div>
       <div class="sheet-frame" id="sheet-frame">
         <div class="sheet" id="sheet">
           <article class="resume t-classic" id="resume"></article>
           <div class="guides" id="guides" aria-hidden="true"></div>
         </div>
       </div>
+      <p class="preview-meta" id="preview-meta"></p>
     </section>
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden>
     <span id="toast-text"></span>
-    <button type="button" class="btn btn-small btn-ghost" id="toast-action" hidden>Undo</button>
+    <button type="button" class="btn btn-small" id="toast-action" hidden>Undo</button>
   </div>
 
   <dialog id="dlg-print" class="dialog">
@@ -115,7 +104,7 @@
     <p class="muted">The text stays selectable, so applicant tracking systems (ATS) can read it.</p>
     <label class="check"><input type="checkbox" id="print-tip-off"> Don't show this again</label>
     <div class="dialog-actions">
-      <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+      <button type="button" class="btn btn-text" data-close>Cancel</button>
       <button type="button" class="btn btn-primary" id="print-go">Open print window</button>
     </div>
   </dialog>
@@ -125,9 +114,9 @@
     <p>Lots of “free” resume builders charge you at the download step. FreeCV doesn't, and never will.</p>
     <ul>
       <li>No account, no sign-up, no tracking.</li>
-      <li>Your resume lives only in this browser (localStorage). Nothing is uploaded.</li>
+      <li>Your resume lives only in this browser. Nothing is uploaded.</li>
       <li>Use <strong>Export</strong> to save a backup file and <strong>Import</strong> to load it on another device or browser.</li>
-      <li>PDFs are made by your browser's print feature, so the text stays real text that ATS software can read.</li>
+      <li>PDFs come from your browser's print feature, so the text stays real text that ATS software can read.</li>
     </ul>
     <div class="dialog-actions">
       <button type="button" class="btn btn-primary" data-close>Got it</button>
