@@ -650,7 +650,9 @@
   function doPrint() {
     flushSave();
     renderPreview();
-    window.print();
+    // Wait for the template's font, or the PDF would be set in the fallback font.
+    var ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+    ready.then(function () { window.print(); });
   }
   // The PDF file name defaults to the document title.
   window.addEventListener('beforeprint', function () {
@@ -687,6 +689,8 @@
   if (window.ResizeObserver) new ResizeObserver(function () { layoutSheet(); }).observe(els.preview);
   else window.addEventListener('resize', layoutSheet);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(layoutSheet);
+  // Switching template loads a new font; re-measure page breaks once it arrives.
+  if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', layoutSheet);
 
   // First visit: open the first job so newcomers see how entries work.
   var exp = secById('experience');

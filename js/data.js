@@ -14,15 +14,17 @@
   };
 
   FreeCV.ACCENTS = [
-    { name: 'Navy', value: '#1f3a5f' },
+    { name: 'Navy', value: '#1f4e79' },
     { name: 'Teal', value: '#0f6b66' },
-    { name: 'Burgundy', value: '#8b1e3f' },
+    { name: 'Burgundy', value: '#7a2e3a' },
     { name: 'Forest', value: '#2f5d34' },
-    { name: 'Slate', value: '#3b4656' },
-    { name: 'Black', value: '#111111' }
+    { name: 'Slate', value: '#3d4a5c' },
+    { name: 'Black', value: '#1a1a1a' }
   ];
 
-  FreeCV.TEMPLATES = ['classic', 'modern', 'minimal'];
+  FreeCV.TEMPLATES = ['harbor', 'ledger', 'atlas', 'quiet'];
+  // Backups made before the v2 templates still load, mapped to the closest new look.
+  var LEGACY_TEMPLATES = { classic: 'ledger', modern: 'harbor', minimal: 'quiet' };
   FreeCV.PAPERS = ['a4', 'letter'];
 
   /*
@@ -109,7 +111,7 @@
   }
 
   FreeCV.defaultSettings = function () {
-    return { template: 'classic', accent: FreeCV.ACCENTS[0].value, paper: 'a4' };
+    return { template: 'harbor', accent: FreeCV.ACCENTS[0].value, paper: 'a4' };
   };
 
   FreeCV.blank = function (settings) {
@@ -196,8 +198,9 @@
 
     var def = FreeCV.defaultSettings();
     var st = raw.settings || {};
+    var tpl = LEGACY_TEMPLATES[st.template] || st.template;
     var settings = {
-      template: FreeCV.TEMPLATES.indexOf(st.template) >= 0 ? st.template : def.template,
+      template: FreeCV.TEMPLATES.indexOf(tpl) >= 0 ? tpl : def.template,
       accent: /^#[0-9a-f]{6}$/i.test(st.accent) ? st.accent : def.accent,
       paper: FreeCV.PAPERS.indexOf(st.paper) >= 0 ? st.paper : def.paper
     };

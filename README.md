@@ -5,8 +5,8 @@ A small, fast resume builder that is actually free, including the PDF export.
 - Runs entirely in the browser: no backend, no accounts, no tracking
 - Autosaves to `localStorage`; **Export** downloads a JSON backup, **Import** (or drag-and-drop) restores it
 - PDF via the browser's print dialog (Save as PDF), so text stays selectable and ATS-readable
-- Three single-column templates (Classic, Modern, Minimal), accent colour, A4 / Letter
-- No build step, no dependencies, about 66 KB total
+- Four ATS-friendly templates (Harbor, Ledger, Atlas, Quiet), accent colour, A4 / Letter
+- No build step, no dependencies: about 88 KB of code, plus one 25–100 KB font for the chosen template
 
 ## Run locally
 
@@ -24,7 +24,8 @@ Then visit http://localhost:5178.
 | --- | --- |
 | `index.html` | Page shell, toolbar, dialogs, icon sprite |
 | `css/app.css` | Editor/app UI, mobile tabs, print rules (prints only the resume) |
-| `css/resume.css` | The three resume templates (sizes in pt so the preview matches the PDF) |
+| `css/resume.css` | The four resume templates and their `@font-face` rules (sizes in pt so the preview matches the PDF) |
+| `fonts/` | Self-hosted OFL fonts, one family per template (see `fonts/LICENSE.md`) |
 | `js/data.js` | Data model, field definitions, example resume, import validation (`normalize`) |
 | `js/preview.js` | Resume data → resume HTML |
 | `js/editor.js` | Resume data → editor form |
@@ -34,7 +35,17 @@ Scripts are plain `<script>` files that share a `window.FreeCV` namespace (not E
 
 ## Notes for template work
 
-- Keep everything single-column, and keep real text (no images or canvas) so ATS can read it.
+| Template | Font | Look |
+| --- | --- | --- |
+| Harbor (default) | Source Sans 3 | Split header, dates in a left gutter, ink-first |
+| Ledger | Source Serif 4 | Centred header, double rule, small-caps headings |
+| Atlas | Manrope | Tinted header panel, accent company names |
+| Quiet | IBM Plex Sans | Minimal, one grey meta line per entry |
+
+- `preview.js` emits the same markup for every template (title, org, location, date, body, in reading order); each template only rearranges it in CSS.
+- Keep real text (no images, icons or canvas) so ATS can read it.
+- Backups from older versions map `classic` → Ledger, `modern` → Harbor, `minimal` → Quiet (see `normalize` in `data.js`).
+- Don't track names tighter than about `-0.015em`: PDF text then loses the space and reads `AisyahRahman`.
 - `.r-entry` and `.r-keep` use `break-inside: avoid`, so entries and section headings never split across pages.
 - Keep uppercase heading `letter-spacing` at **0.1em or less**. Wider tracking makes PDF text extract as `S U M M A R Y`.
 - Page margins come from `@page { margin: 15mm }`, which `app.js` rewrites when the paper size changes.
