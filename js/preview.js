@@ -86,6 +86,14 @@
         link: t(it.link) ? link(prettyUrl(it.link), safeHref(it.link), 'r-link') : '',
         body: richText(it.description, false)
       };
+    },
+    custom: function (it) {
+      return {
+        title: t(it.name) || t(it.org), org: t(it.name) ? t(it.org) : '',
+        loc: t(it.location), date: t(it.date),
+        link: t(it.link) ? link(prettyUrl(it.link), safeHref(it.link), 'r-link') : '',
+        body: richText(it.description, false)
+      };
     }
   };
 
@@ -114,7 +122,7 @@
     var items = sec.items.filter(hasContent);
     if (!items.length) return '';
 
-    if (sec.type === 'skills') {
+    if (sec.type === 'skills' || sec.type === 'list') { // label: details rows
       var lis = items.map(function (it) {
         var name = t(it.name), skills = t(it.skills);
         return '<li class="r-skill">' +

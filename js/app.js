@@ -14,7 +14,8 @@
     preview: $('preview'), guides: $('guides'), meta: $('preview-meta'), workspace: $('workspace'),
     templateSeg: $('template-seg'), paperSeg: $('paper-seg'), swatches: $('swatches'), pageStyle: $('page-style'),
     saveStatus: $('save-status'), toast: $('toast'), toastText: $('toast-text'), toastAction: $('toast-action'),
-    file: $('file-import'), menu: $('more-menu'), dlgPrint: $('dlg-print'), dlgAbout: $('dlg-about')
+    file: $('file-import'), menu: $('more-menu'), dlgPrint: $('dlg-print'), dlgAbout: $('dlg-about'),
+    spacingSeg: $('spacing-seg'), sizeValue: $('size-value'), dlgSection: $('dlg-section'), presetGrid: $('preset-grid')
   };
 
   /* ---------- Storage (every access guarded: private mode can throw) ---------- */
@@ -116,7 +117,15 @@
   function schedulePreview() {
     if (previewQueued) return;
     previewQueued = true;
-    requestAnimationFrame(function () { previewQueued = false; renderPreview(); renderOutlineCounts(); });
+    // Next frame, or after 150ms if frames are paused (hidden tab), whichever comes first.
+    var done = false;
+    var run = function () {
+      if (done) return;
+      done = true; previewQueued = false;
+      renderPreview(); renderOutlineCounts();
+    };
+    requestAnimationFrame(run);
+    setTimeout(run, 150);
   }
 
   // Cheap outline refresh while typing (titles and counts), without stealing focus.
@@ -134,15 +143,26 @@
     return state.settings.paper === 'letter' ? { w: 215.9, h: 279.4, label: 'Letter' } : { w: 210, h: 297, label: 'A4' };
   }
 
+  var MARGIN_MM = 15;
+  function contentHeight() { return (paperDims().h - 2 * MARGIN_MM) * MM; }
+
+  // How many pages the resume needs right now (measured unscaled; includes the text-size zoom).
+  function measurePages() {
+    els.sheet.style.transform = '';
+    var h = els.resume.getBoundingClientRect().height;
+    return Math.max(1, Math.ceil((h - 2) / contentHeight()));
+  }
+
   // Fit the paper to the preview column and draw approximate page-break lines.
+  var lastPages = 1;
   function layoutSheet() {
     if (!els.preview.offsetParent) return; // hidden (mobile edit tab)
-    var d = paperDims(), m = 15;
+    var d = paperDims(), m = MARGIN_MM;
     var sheet = els.sheet;
-    sheet.style.transform = '';
+    var pages = measurePages();
     var sheetW = sheet.offsetWidth;
-    var contentH = (d.h - 2 * m) * MM;
-    var pages = Math.max(1, Math.ceil((els.resume.offsetHeight - 2) / contentH));
+    var contentH = contentHeight();
+    lastPages = pages;
 
     sheet.style.minHeight = (pages * d.h) + 'mm';
     var guides = '';
@@ -158,9 +178,48 @@
     els.frame.style.width = (sheetW * scale) + 'px';
     els.frame.style.height = (sheet.offsetHeight * scale) + 'px';
 
-    els.meta.textContent = d.label + ' · ' + pages + ' page' + (pages > 1 ? 's' : '') +
-      (pages > 1 ? ' · dashed lines show roughly where pages break' : '');
+    els.meta.innerHTML = '<span>' + d.label + ' · ' + pages + ' page' + (pages > 1 ? 's' : '') +
+      (pages > 1 ? ' · dashed lines show roughly where pages break' : '') + '</span>' +
+      (pages > 1 ? '<button type="button" class="fit-btn" data-fit>Fit to 1 page</button>' : '');
   }
+
+  /* ---------- Spacing, text size, fit to one page ---------- */
+
+  function applyScale() {
+    els.resume.style.setProperty('--sp', state.settings.spacing);
+    els.resume.style.setProperty('--zoom', state.settings.size);
+  }
+
+  function round3(n) { return Math.round(n * 1000) / 1000; }
+
+  // Tighten spacing first, then shrink text in small steps, until the resume fits on one page.
+  function fitToOnePage() {
+    var s = state.settings;
+    var before = { spacing: s.spacing, size: s.size };
+    snapshot();
+    var fits = function () { applyScale(); return measurePages() === 1; };
+    var ok = false;
+
+    var spacings = FreeCV.SPACINGS.map(function (p) { return p.value; })
+      .filter(function (v) { return v <= s.spacing + 1e-9; })
+      .sort(function (a, b) { return b - a; });
+    for (var i = 0; i < spacings.length && !ok; i++) { s.spacing = spacings[i]; ok = fits(); }
+    for (var size = s.size; !ok && size >= FreeCV.SIZE_MIN - 1e-9; size = round3(size - FreeCV.SIZE_STEP)) {
+      s.size = size; ok = fits();
+    }
+
+    if (!ok) {
+      s.spacing = before.spacing; s.size = before.size;
+      applySettings(); layoutSheet();
+      toast('Too long for one page even at the smallest size. Try trimming a few bullet points.');
+      return;
+    }
+    applySettings();
+    edited();
+    var spacingName = (FreeCV.SPACINGS.find(function (p) { return p.value === s.spacing; }) || {}).name || 'Custom';
+    toast('Fitted to 1 page: ' + spacingName.toLowerCase() + ' spacing, ' + Math.round(s.size * 100) + '% text.', true);
+  }
+  els.meta.addEventListener('click', function (e) { if (e.target.closest('[data-fit]')) fitToOnePage(); });
 
   function applySettings() {
     var s = state.settings;
@@ -170,6 +229,13 @@
     els.pageStyle.textContent = '@page { size: ' + (s.paper === 'letter' ? 'letter' : 'A4') + '; margin: 15mm; }';
     els.templateSeg.querySelectorAll('[data-template]').forEach(function (b) { b.setAttribute('aria-checked', b.dataset.template === s.template); });
     els.paperSeg.querySelectorAll('[data-paper]').forEach(function (b) { b.setAttribute('aria-checked', b.dataset.paper === s.paper); });
+    els.spacingSeg.innerHTML = FreeCV.SPACINGS.map(function (p) {
+      return '<button type="button" role="radio" data-spacing="' + p.value + '" aria-checked="' + (p.value === s.spacing) + '">' + p.name + '</button>';
+    }).join('');
+    els.sizeValue.textContent = Math.round(s.size * 100) + '%';
+    document.querySelector('[data-size-step="-1"]').disabled = s.size <= FreeCV.SIZE_MIN + 1e-9;
+    document.querySelector('[data-size-step="1"]').disabled = s.size >= FreeCV.SIZE_MAX - 1e-9;
+    applyScale();
     renderSwatches();
   }
 
@@ -408,6 +474,16 @@
         focus = { sel: '[data-action="' + a + '"][data-sec="' + sec.id + '"]' };
         break;
 
+      case 'add-section':
+        openAddSection();
+        return;
+
+      case 'del-sec':
+        snapshot();
+        state.sections.splice(state.sections.indexOf(sec), 1);
+        toast('“' + (sec.title || 'Section') + '” deleted.', true);
+        break;
+
       case 'toggle-hide':
         sec.hidden = !sec.hidden;
         focus = { sel: '[data-action="toggle-hide"][data-sec="' + sec.id + '"].icon-btn' };
@@ -420,6 +496,29 @@
     renderEditor(focus);
     renderOutline();
     edited();
+  });
+
+  /* ---------- Add section ---------- */
+
+  els.presetGrid.innerHTML = FreeCV.SECTION_PRESETS.map(function (p, i) {
+    return '<button type="button" data-preset="' + i + '"><strong>' + FreeCV.esc(p.label || p.title) + '</strong><span>' + FreeCV.esc(p.desc) + '</span></button>';
+  }).join('');
+
+  function openAddSection() { els.dlgSection.showModal(); }
+  document.querySelectorAll('[data-open-add]').forEach(function (b) { b.addEventListener('click', openAddSection); });
+
+  els.presetGrid.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-preset]');
+    if (!b) return;
+    var p = FreeCV.SECTION_PRESETS[+b.dataset.preset];
+    var sec = FreeCV.newSection(p.type, p.title);
+    state.sections.push(sec);
+    ui.openEntries.add(sec.items[0].id);
+    els.dlgSection.close();
+    renderOutline();
+    renderEditor({ sel: '[data-item="' + sec.items[0].id + '"][data-field]' });
+    edited();
+    scrollToSection(sec.id);
   });
 
   /* ---------- Outline: jump, drag to reorder, Alt+arrows ---------- */
@@ -525,6 +624,19 @@
     var b = e.target.closest('[data-paper]');
     if (!b) return;
     state.settings.paper = b.dataset.paper;
+    applySettings(); edited();
+  });
+  els.spacingSeg.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-spacing]');
+    if (!b) return;
+    state.settings.spacing = parseFloat(b.dataset.spacing);
+    applySettings(); edited();
+  });
+  document.querySelector('.stepper').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-size-step]');
+    if (!b || b.disabled) return;
+    var s = state.settings;
+    s.size = Math.min(FreeCV.SIZE_MAX, Math.max(FreeCV.SIZE_MIN, round3(s.size + (+b.dataset.sizeStep) * FreeCV.SIZE_STEP)));
     applySettings(); edited();
   });
   els.swatches.addEventListener('click', function (e) {

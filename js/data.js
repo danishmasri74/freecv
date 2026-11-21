@@ -82,8 +82,56 @@
       ],
       label: function (it) { return it.name; },
       meta: function (it) { return (it.date || '').trim(); }
+    },
+    // Sections people add themselves. `multiple`: a resume can have any number of them.
+    custom: {
+      defaultTitle: 'New section',
+      addLabel: 'Add entry',
+      multiple: true,
+      fields: [
+        { key: 'name', label: 'Title', placeholder: 'AWS Certified Developer' },
+        { key: 'date', label: 'Date (optional)', placeholder: '2024' },
+        { key: 'org', label: 'Organisation (optional)', placeholder: 'Amazon Web Services' },
+        { key: 'location', label: 'Location (optional)' },
+        { key: 'link', label: 'Link (optional)', wide: true },
+        { key: 'description', label: 'Details (optional)', area: true, hint: 'Lines starting with “-” become bullets.' }
+      ],
+      label: function (it) { return [it.name, it.org].filter(Boolean).join(' · '); },
+      meta: function (it) { return (it.date || '').trim(); }
+    },
+    list: {
+      defaultTitle: 'New list',
+      addLabel: 'Add row',
+      multiple: true,
+      fields: [
+        { key: 'name', label: 'Label (optional)', placeholder: 'Bahasa Malaysia' },
+        { key: 'skills', label: 'Details', placeholder: 'Native' }
+      ],
+      label: function (it) { return [it.name, it.skills].filter(Boolean).join(' · '); }
     }
   };
+
+  // Choices in the "Add section" dialog.
+  FreeCV.SECTION_PRESETS = [
+    { type: 'custom', title: 'Certifications', desc: 'Courses, licences, certificates' },
+    { type: 'custom', title: 'Awards', desc: 'Prizes, scholarships, honours' },
+    { type: 'custom', title: 'Volunteering', desc: 'Unpaid roles and community work' },
+    { type: 'custom', title: 'Publications', desc: 'Papers, articles, talks' },
+    { type: 'list', title: 'Languages', desc: 'Language and level, one per row' },
+    { type: 'list', title: 'Interests', desc: 'Short label and details' },
+    { type: 'custom', title: 'New section', desc: 'Blank section with entries', label: 'Custom entries' },
+    { type: 'list', title: 'New list', desc: 'Blank label / details list', label: 'Custom list' }
+  ];
+
+  FreeCV.newSection = function (type, title) {
+    return { id: 's' + FreeCV.uid(), type: type, title: title || FreeCV.TYPES[type].defaultTitle, hidden: false, items: [FreeCV.blankItem(type)] };
+  };
+
+  // Spacing presets and text-size limits (text size is a zoom factor on the resume).
+  FreeCV.SPACINGS = [{ name: 'Compact', value: 0.7 }, { name: 'Normal', value: 1 }, { name: 'Roomy', value: 1.3 }];
+  FreeCV.SIZE_MIN = 0.85;
+  FreeCV.SIZE_MAX = 1.1;
+  FreeCV.SIZE_STEP = 0.025;
 
   function dateRange(a, b) {
     a = (a || '').trim(); b = (b || '').trim();
@@ -111,7 +159,7 @@
   }
 
   FreeCV.defaultSettings = function () {
-    return { template: 'harbor', accent: FreeCV.ACCENTS[0].value, paper: 'a4' };
+    return { template: 'harbor', accent: FreeCV.ACCENTS[0].value, paper: 'a4', spacing: 1, size: 1 };
   };
 
   FreeCV.blank = function (settings) {
@@ -186,6 +234,10 @@
     };
   };
 
+  function clampNum(v, min, max, fallback) {
+    return typeof v === 'number' && isFinite(v) ? Math.min(max, Math.max(min, v)) : fallback;
+  }
+
   function str(v) { return typeof v === 'string' ? v : (typeof v === 'number' ? String(v) : ''); }
 
   /*
@@ -202,7 +254,9 @@
     var settings = {
       template: FreeCV.TEMPLATES.indexOf(tpl) >= 0 ? tpl : def.template,
       accent: /^#[0-9a-f]{6}$/i.test(st.accent) ? st.accent : def.accent,
-      paper: FreeCV.PAPERS.indexOf(st.paper) >= 0 ? st.paper : def.paper
+      paper: FreeCV.PAPERS.indexOf(st.paper) >= 0 ? st.paper : def.paper,
+      spacing: clampNum(st.spacing, 0.5, 1.5, def.spacing),
+      size: clampNum(st.size, FreeCV.SIZE_MIN, FreeCV.SIZE_MAX, def.size)
     };
 
     var p = raw.personal;
@@ -213,12 +267,19 @@
     };
     if (!personal.links.length) personal.links = [''];
 
-    var seen = {};
+    var seen = {}, usedIds = {};
     var sections = [];
     raw.sections.forEach(function (s) {
-      if (!s || !FreeCV.TYPES[s.type] || seen[s.type]) return;
+      if (!s || !FreeCV.TYPES[s.type]) return;
+      var multiple = FreeCV.TYPES[s.type].multiple;
+      if (!multiple && seen[s.type]) return; // built-in sections appear once
       seen[s.type] = true;
       var out = section(s.type, { title: str(s.title) || FreeCV.TYPES[s.type].defaultTitle, hidden: !!s.hidden });
+      if (multiple) {
+        // Keep the saved id if it is safe and unique (it ends up in DOM ids and selectors).
+        out.id = typeof s.id === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(s.id) && !usedIds[s.id] && !FreeCV.TYPES[s.id] ? s.id : 's' + FreeCV.uid();
+      }
+      usedIds[out.id] = true;
       if (s.type === 'summary') {
         out.text = str(s.text);
       } else {

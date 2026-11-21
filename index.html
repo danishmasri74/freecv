@@ -59,6 +59,7 @@
     <nav class="outline" aria-label="Sections">
       <div class="outline-label">Sections</div>
       <ol class="outline-list" id="outline-list"></ol>
+      <button type="button" class="outline-add" data-open-add>+ Add section</button>
       <p class="outline-hint">Drag to reorder</p>
       <div class="backup" data-backup></div>
     </nav>
@@ -77,6 +78,12 @@
         <div class="seg" role="radiogroup" aria-label="Paper size" id="paper-seg">
           <button type="button" role="radio" data-paper="a4">A4</button>
           <button type="button" role="radio" data-paper="letter">Letter</button>
+        </div>
+        <div class="seg" role="radiogroup" aria-label="Spacing" id="spacing-seg"></div>
+        <div class="stepper" role="group" aria-label="Text size">
+          <button type="button" data-size-step="-1" aria-label="Smaller text">A−</button>
+          <output id="size-value" aria-live="polite">100%</output>
+          <button type="button" data-size-step="1" aria-label="Larger text">A+</button>
         </div>
       </div>
       <div class="sheet-frame" id="sheet-frame">
@@ -107,6 +114,15 @@
     <div class="dialog-actions">
       <button type="button" class="btn btn-text" data-close>Cancel</button>
       <button type="button" class="btn btn-primary" id="print-go">Open print window</button>
+    </div>
+  </dialog>
+
+  <dialog id="dlg-section" class="dialog">
+    <h2>Add a section</h2>
+    <p class="muted">You can rename, reorder, hide or delete it afterwards.</p>
+    <div class="preset-grid" id="preset-grid"></div>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-text" data-close>Cancel</button>
     </div>
   </dialog>
 

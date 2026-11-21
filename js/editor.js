@@ -143,6 +143,7 @@
       iconBtn('up-sec', 'up', 'Move section up', attrs, idx === 0) +
       iconBtn('down-sec', 'down', 'Move section down', attrs, idx === count - 1) +
       iconBtn('toggle-hide', sec.hidden ? 'eye-off' : 'eye', sec.hidden ? 'Show section on resume' : 'Hide section from resume', attrs + ' aria-pressed="' + sec.hidden + '"') +
+      (FreeCV.TYPES[sec.type].multiple ? iconBtn('del-sec', 'trash', 'Delete section', attrs, false, 'danger') : '') +
       '</div>' + body + '</section>';
   }
 
@@ -152,6 +153,7 @@
       data.sections.map(function (s, i) {
         return '<hr class="f-rule">' + section(s, i, data.sections.length, ui);
       }).join('') +
+      '<hr class="f-rule"><button type="button" class="add-section" data-action="add-section">+ Add section</button>' +
       '<div class="editor-foot"><div class="backup" data-backup></div>' +
       '<p>Saved automatically in this browser. FreeCV is free, with no paywall on PDF export.</p></div>';
   };

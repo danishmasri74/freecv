@@ -123,6 +123,30 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .outline-list li.drop-before::before { top: -2px; }
 .outline-list li.drop-after::after { bottom: -2px; }
 .outline-hint { margin: 8px 10px 0; font-size: 12px; color: var(--faint); }
+.outline-add {
+  margin-top: 6px; height: 36px; padding: 0 10px;
+  border: 0; border-radius: var(--radius); background: none; cursor: pointer;
+  text-align: left; font-weight: 600; color: var(--ink);
+}
+.outline-add:hover { background: var(--soft); }
+
+.add-section {
+  width: 100%; height: 48px;
+  border: 1px dashed var(--line-2); border-radius: var(--radius); background: none; cursor: pointer;
+  font-weight: 600; color: var(--ink-2);
+}
+.add-section:hover { border-color: var(--ink); color: var(--ink); background: var(--surface); }
+
+.preset-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.preset-grid button {
+  display: flex; flex-direction: column; gap: 2px; align-items: flex-start;
+  padding: 10px 12px; min-height: 56px;
+  border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); cursor: pointer; text-align: left;
+}
+.preset-grid button:hover { border-color: var(--ink); background: var(--bg); }
+.preset-grid strong { font-size: 14px; }
+.preset-grid span { font-size: 12px; color: var(--muted); }
+@media (max-width: 480px) { .preset-grid { grid-template-columns: 1fr; } }
 
 .backup {
   margin-top: auto;
@@ -165,6 +189,23 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .seg button:hover { color: var(--ink); }
 .seg button[aria-checked="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+.stepper { display: flex; align-items: center; padding: 3px; background: var(--seg); border-radius: 9px; }
+.stepper button {
+  width: 34px; height: 30px; border: 0; border-radius: 7px; background: none; cursor: pointer;
+  font-size: 13px; font-weight: 600; color: var(--ink-2);
+}
+.stepper button:hover:not(:disabled) { background: var(--surface); color: var(--ink); }
+.stepper button:disabled { opacity: .35; cursor: default; }
+.stepper output { min-width: 42px; text-align: center; font-size: 13px; font-variant-numeric: tabular-nums; }
+
+.preview-meta { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.fit-btn {
+  height: 28px; padding: 0 12px;
+  border: 1px solid var(--ink); border-radius: 7px; background: var(--surface);
+  font-size: 12px; font-weight: 600; color: var(--ink); cursor: pointer;
+}
+.fit-btn:hover { background: var(--ink); color: #fff; }
 
 .swatches { display: flex; gap: 8px; align-items: center; }
 .swatch {

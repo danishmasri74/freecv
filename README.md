@@ -6,6 +6,8 @@ A small, fast resume builder that is actually free, including the PDF export.
 - Autosaves to `localStorage`; **Export** downloads a JSON backup, **Import** (or drag-and-drop) restores it
 - PDF via the browser's print dialog (Save as PDF), so text stays selectable and ATS-readable
 - Four ATS-friendly templates (Harbor, Ledger, Atlas, Quiet), accent colour, A4 / Letter
+- Spacing (Compact / Normal / Roomy), text size (85–110%) and a one-click **Fit to 1 page**
+- Add your own sections: Certifications, Awards, Volunteering, Publications, Languages, Interests, or blank ones
 - No build step, no dependencies: about 88 KB of code, plus one 25–100 KB font for the chosen template
 
 ## Run locally
@@ -44,6 +46,8 @@ Scripts are plain `<script>` files that share a `window.FreeCV` namespace (not E
 
 - `preview.js` emits the same markup for every template (title, org, location, date, body, in reading order); each template only rearranges it in CSS.
 - Keep real text (no images, icons or canvas) so ATS can read it.
+- Vertical spacing between header, sections and entries is written as `calc(Npt * var(--sp))` so the spacing setting scales it; text size is CSS `zoom` on `.resume` (page margins stay fixed).
+- Section types with `multiple: true` in `data.js` (`custom`, `list`) can be added any number of times and deleted; the built-in sections can only be hidden.
 - Backups from older versions map `classic` → Ledger, `modern` → Harbor, `minimal` → Quiet (see `normalize` in `data.js`).
 - Don't track names tighter than about `-0.015em`: PDF text then loses the space and reads `AisyahRahman`.
 - `.r-entry` and `.r-keep` use `break-inside: avoid`, so entries and section headings never split across pages.
