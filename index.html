@@ -34,6 +34,14 @@
     <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5M4 9h11a5 5 0 010 10h-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-redo" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5M20 9H9a5 5 0 000 10h3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 21V9M7 14l5-5 5 5M5 3h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M11 18h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5zM14 3v5h5M9 13h6M9 17h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></symbol>
     <symbol id="i-grip" viewBox="0 0 24 24"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
   </svg>
 
@@ -41,44 +49,58 @@
     <div class="brand">
       <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6" fill="currentColor"/><path d="M7 8h10M7 12h10M7 16h6" stroke="var(--bg)" stroke-width="2" stroke-linecap="round"/></svg>
       <span class="brand-name">FreeCV</span>
-      <span class="brand-sep" aria-hidden="true">/</span>
-      <details class="menu switcher" id="switcher">
-        <summary class="btn btn-text switcher-btn" aria-label="Switch resume">
-          <span class="switcher-name" id="switcher-name">Resume</span>
-          <svg class="ic" aria-hidden="true"><use href="#i-chev"/></svg>
-        </summary>
-        <div class="menu-list switcher-list">
-          <div class="menu-label">Your resumes in this browser</div>
-          <div id="switcher-items"></div>
-          <hr>
-          <button type="button" data-res="new">New blank resume</button>
-          <button type="button" data-res="example">New from example</button>
-          <button type="button" data-res="duplicate">Duplicate this resume</button>
-          <button type="button" data-res="rename">Rename…</button>
-          <button type="button" class="danger" data-res="delete">Delete this resume…</button>
-        </div>
-      </details>
     </div>
+
+    <details class="menu switcher" id="switcher">
+      <summary class="switcher-btn" aria-label="Switch resume">
+        <span class="avatar" id="switcher-avatar" aria-hidden="true"></span>
+        <span class="switcher-name" id="switcher-name">Resume</span>
+        <span class="switcher-count" id="switcher-count"></span>
+        <svg class="ic chev" aria-hidden="true"><use href="#i-down"/></svg>
+      </summary>
+      <div class="menu-list switcher-list">
+        <div class="menu-label">Your resumes in this browser</div>
+        <div id="switcher-items"></div>
+        <hr>
+        <button type="button" data-res="new"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>New resume</button>
+        <button type="button" data-res="example"><svg class="ic" aria-hidden="true"><use href="#i-file"/></svg>New from example</button>
+        <button type="button" data-res="duplicate"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg>Duplicate this resume</button>
+        <button type="button" data-res="rename"><svg class="ic" aria-hidden="true"><use href="#i-pencil"/></svg>Rename…</button>
+        <button type="button" class="danger" data-res="delete"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>Delete…</button>
+      </div>
+    </details>
+
+    <div class="spacer"></div>
+
     <div class="history" role="group" aria-label="History">
       <button type="button" class="icon-btn" id="btn-undo" aria-label="Undo" title="Undo (Ctrl+Z)" disabled><svg class="ic"><use href="#i-undo"/></svg></button>
       <button type="button" class="icon-btn" id="btn-redo" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled><svg class="ic"><use href="#i-redo"/></svg></button>
     </div>
-    <span class="save-status" id="save-status" role="status">Saved in this browser</span>
-    <div class="actions">
-      <button type="button" class="btn btn-text hide-sm" id="btn-import">Import</button>
-      <button type="button" class="btn btn-text hide-sm" id="btn-export">Export</button>
-      <details class="menu" id="more-menu">
-        <summary class="btn btn-text" aria-label="More options">More</summary>
-        <div class="menu-list">
-          <button type="button" class="show-sm" data-menu="import">Import backup…</button>
-          <button type="button" class="show-sm" data-menu="export">Export backup</button>
-          <button type="button" data-menu="share">Open on another device…</button>
-          <button type="button" data-menu="about">About FreeCV</button>
-        </div>
-      </details>
-      <button type="button" class="btn btn-primary" id="btn-pdf">Download PDF</button>
-      <input type="file" id="file-import" accept="application/json,.json" hidden>
-    </div>
+    <span class="save-status" id="save-status" role="status"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span id="save-text">Saved</span></span>
+
+    <details class="menu backup-menu" id="backup-menu">
+      <summary class="btn btn-outline" aria-label="Backup options">
+        <svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span class="hide-xs">Backup</span>
+        <svg class="ic chev" aria-hidden="true"><use href="#i-down"/></svg>
+      </summary>
+      <div class="menu-list rich">
+        <button type="button" data-backup-act="export">
+          <svg class="ic" aria-hidden="true"><use href="#i-download"/></svg>
+          <span><strong>Download backup file</strong><span>Saves a .json copy of this resume to your computer.</span></span>
+        </button>
+        <button type="button" data-backup-act="import">
+          <svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg>
+          <span><strong>Restore from backup…</strong><span>Adds a resume from a .json file. Nothing is overwritten.</span></span>
+        </button>
+        <button type="button" data-backup-act="share">
+          <svg class="ic" aria-hidden="true"><use href="#i-phone"/></svg>
+          <span><strong>Open on another device…</strong><span>Get a private link that carries this resume.</span></span>
+        </button>
+        <div class="menu-foot" id="backup-foot">Last backup: never</div>
+      </div>
+    </details>
+    <button type="button" class="btn btn-primary" id="btn-pdf" aria-label="Download PDF"><span class="hide-xs">Download&nbsp;</span>PDF</button>
+    <input type="file" id="file-import" accept="application/json,.json" hidden>
   </header>
 
   <nav class="tabs" role="tablist" aria-label="View">
@@ -90,33 +112,59 @@
     <nav class="outline" aria-label="Sections">
       <div class="outline-label">Sections</div>
       <ol class="outline-list" id="outline-list"></ol>
-      <button type="button" class="outline-add" data-open-add>+ Add section</button>
-      <p class="outline-hint">Drag to reorder</p>
-      <div class="backup" data-backup></div>
-      <p class="outline-trust">Free forever · <a href="https://github.com/danishmasri74/freecv" target="_blank" rel="noopener">Open source</a><br>Your data never leaves this browser</p>
+      <button type="button" class="outline-add" data-open-add><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Add section</button>
+      <div class="outline-foot">
+        <div class="backup" data-backup></div>
+        <p class="trust">Free forever · <a href="https://github.com/danishmasri74/freecv" target="_blank" rel="noopener">Open source</a> · <button type="button" class="link-btn" data-about>About</button></p>
+      </div>
     </nav>
 
     <section class="editor" id="editor" aria-label="Resume editor"></section>
 
     <section class="preview" id="preview" aria-label="Resume preview">
-      <div class="design-bar">
-        <div class="seg" role="radiogroup" aria-label="Template" id="template-seg">
-          <button type="button" role="radio" data-template="harbor">Harbor</button>
-          <button type="button" role="radio" data-template="ledger">Ledger</button>
-          <button type="button" role="radio" data-template="atlas">Atlas</button>
-          <button type="button" role="radio" data-template="quiet">Quiet</button>
-        </div>
-        <div class="swatches" id="swatches" role="radiogroup" aria-label="Accent colour"></div>
-        <div class="seg" role="radiogroup" aria-label="Paper size" id="paper-seg">
-          <button type="button" role="radio" data-paper="a4">A4</button>
-          <button type="button" role="radio" data-paper="letter">Letter</button>
-        </div>
-        <div class="seg" role="radiogroup" aria-label="Spacing" id="spacing-seg"></div>
-        <div class="stepper" role="group" aria-label="Text size">
-          <button type="button" data-size-step="-1" aria-label="Smaller text">A−</button>
-          <output id="size-value" aria-live="polite">100%</output>
-          <button type="button" data-size-step="1" aria-label="Larger text">A+</button>
-        </div>
+      <div class="design-toolbar" role="toolbar" aria-label="Design">
+        <details class="pop" id="pop-template">
+          <summary class="tool-btn"><span class="tool-label">Template</span><span class="tool-value" id="template-value">Harbor</span><svg class="ic chev" aria-hidden="true"><use href="#i-down"/></svg></summary>
+          <div class="pop-panel">
+            <div class="tpl-grid" id="template-seg" role="radiogroup" aria-label="Template">
+              <button type="button" role="radio" data-template="harbor"><span class="thumb thumb-harbor" aria-hidden="true"><i class="t-name"></i><i class="t-rule"></i><i class="t-acc"></i><i class="t-grid"><b></b><b></b><b></b><b></b></i></span><span class="tpl-name">Harbor</span></button>
+              <button type="button" role="radio" data-template="ledger"><span class="thumb thumb-ledger" aria-hidden="true"><i class="t-name"></i><i class="t-double"></i><i class="t-acc"></i><i class="t-line"></i><i class="t-line t-light"></i></span><span class="tpl-name">Ledger</span></button>
+              <button type="button" role="radio" data-template="atlas"><span class="thumb thumb-atlas" aria-hidden="true"><i class="t-panel"><b></b></i><i class="t-head"></i><i class="t-bar"></i><i class="t-line"></i></span><span class="tpl-name">Atlas</span></button>
+              <button type="button" role="radio" data-template="quiet"><span class="thumb thumb-quiet" aria-hidden="true"><i class="t-name"></i><i class="t-acc"></i><i class="t-line"></i><i class="t-line t-light"></i></span><span class="tpl-name">Quiet</span></button>
+            </div>
+          </div>
+        </details>
+        <details class="pop" id="pop-colour">
+          <summary class="tool-btn" aria-label="Accent colour"><span class="dot" id="accent-dot"></span><span class="tool-value" id="accent-value">Navy</span><svg class="ic chev" aria-hidden="true"><use href="#i-down"/></svg></summary>
+          <div class="pop-panel">
+            <div class="pop-label">Accent colour</div>
+            <div class="swatches" id="swatches" role="radiogroup" aria-label="Accent colour"></div>
+          </div>
+        </details>
+        <details class="pop" id="pop-layout">
+          <summary class="tool-btn"><span class="tool-label">Layout</span><span class="tool-value" id="layout-value">A4 · Normal · 100%</span><svg class="ic chev" aria-hidden="true"><use href="#i-down"/></svg></summary>
+          <div class="pop-panel layout-panel">
+            <div class="pop-label">Paper</div>
+            <div class="seg full" role="radiogroup" aria-label="Paper size" id="paper-seg">
+              <button type="button" role="radio" data-paper="a4">A4</button>
+              <button type="button" role="radio" data-paper="letter">Letter</button>
+            </div>
+            <div class="pop-label">Spacing</div>
+            <div class="seg full" role="radiogroup" aria-label="Spacing" id="spacing-seg"></div>
+            <div class="pop-label">Text size</div>
+            <div class="size-row" role="group" aria-label="Text size">
+              <button type="button" class="size-btn" data-size-step="-1" aria-label="Smaller text">−</button>
+              <input type="range" id="size-range" min="85" max="110" step="2.5" aria-label="Text size">
+              <button type="button" class="size-btn" data-size-step="1" aria-label="Larger text">+</button>
+              <output id="size-value">100%</output>
+            </div>
+            <hr>
+            <button type="button" class="btn btn-primary btn-block" data-fit>Fit to 1 page</button>
+            <p class="pop-hint">Tightens spacing first, then text size (down to 85%), until it fits.</p>
+          </div>
+        </details>
+        <span class="spacer"></span>
+        <span class="tool-pages" id="preview-meta"></span>
       </div>
       <div class="sheet-frame" id="sheet-frame">
         <div class="sheet" id="sheet">
@@ -124,7 +172,6 @@
           <div class="guides" id="guides" aria-hidden="true"></div>
         </div>
       </div>
-      <p class="preview-meta" id="preview-meta"></p>
     </section>
   </main>
 

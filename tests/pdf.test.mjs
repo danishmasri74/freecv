@@ -132,8 +132,8 @@ try {
   console.log('\nshare link');
   const a = await browser.newPage();
   await loadExample(a, 'harbor');
-  await a.click('#more-menu summary');
-  await a.click('[data-menu="share"]');
+  await a.click('#backup-menu summary');
+  await a.click('[data-backup-act="share"]');
   await a.waitForFunction(() => document.getElementById('share-link').value.includes('#import='));
   const link = await a.inputValue('#share-link');
   check('share link carries the resume after #', /#import=[zj][A-Za-z0-9_-]+$/.test(link), link.slice(0, 80));

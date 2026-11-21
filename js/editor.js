@@ -13,6 +13,11 @@
       ' aria-label="' + esc(label) + '" title="' + esc(label) + '"' + (disabled ? ' disabled' : '') + '>' + icon(name) + '</button>';
   }
 
+  function menuBtn(action, name, label, attrs, disabled, cls) {
+    return '<button type="button"' + (cls ? ' class="' + cls + '"' : '') + ' data-action="' + action + '" ' + (attrs || '') +
+      (disabled ? ' disabled' : '') + '>' + icon(name) + esc(label) + '</button>';
+  }
+
   function field(attrs, value, o) {
     var id = 'f' + (++fid);
     var ph = o.placeholder ? ' placeholder="' + esc(o.placeholder) + '"' : '';
@@ -139,11 +144,16 @@
     return '<section class="f-sec' + (sec.hidden ? ' is-hidden' : '') + '" id="sec-' + sec.id + '" data-anchor="' + sec.id + '">' +
       '<div class="f-head">' +
       '<input class="f-title" id="' + titleId + '" ' + attrs + ' data-field="title" value="' + esc(sec.title) + '" aria-label="Section title (click to rename)">' +
-      '<label class="icon-btn" for="' + titleId + '" title="Rename section">' + icon('pencil') + '<span class="sr-only">Rename section</span></label>' +
-      iconBtn('up-sec', 'up', 'Move section up', attrs, idx === 0) +
-      iconBtn('down-sec', 'down', 'Move section down', attrs, idx === count - 1) +
-      iconBtn('toggle-hide', sec.hidden ? 'eye-off' : 'eye', sec.hidden ? 'Show section on resume' : 'Hide section from resume', attrs + ' aria-pressed="' + sec.hidden + '"') +
-      (FreeCV.TYPES[sec.type].multiple ? iconBtn('del-sec', 'trash', 'Delete section', attrs, false, 'danger') : '') +
+      (sec.hidden ? '<span class="badge">Hidden</span>' : '') +
+      '<details class="menu sec-menu">' +
+      '<summary class="icon-btn" aria-label="Options for ' + esc(sec.title) + '" title="Section options">' + icon('dots') + '</summary>' +
+      '<div class="menu-list">' +
+      menuBtn('rename-sec', 'pencil', 'Rename', attrs) +
+      menuBtn('up-sec', 'up', 'Move up', attrs, idx === 0) +
+      menuBtn('down-sec', 'down', 'Move down', attrs, idx === count - 1) +
+      menuBtn('toggle-hide', sec.hidden ? 'eye' : 'eye-off', sec.hidden ? 'Show on resume' : 'Hide from resume', attrs) +
+      (FreeCV.TYPES[sec.type].multiple ? '<hr>' + menuBtn('del-sec', 'trash', 'Delete section', attrs, false, 'danger') : '') +
+      '</div></details>' +
       '</div>' + body + '</section>';
   }
 
@@ -153,7 +163,7 @@
       data.sections.map(function (s, i) {
         return '<hr class="f-rule">' + section(s, i, data.sections.length, ui);
       }).join('') +
-      '<hr class="f-rule"><button type="button" class="add-section" data-action="add-section">+ Add section</button>' +
+      '<hr class="f-rule"><button type="button" class="add-section" data-action="add-section">' + icon('plus') + 'Add section</button>' +
       '<div class="editor-foot"><div class="backup" data-backup></div>' +
       '<p class="trust">Free forever · <a href="https://github.com/danishmasri74/freecv" target="_blank" rel="noopener">Open source</a> · Your data never leaves this browser</p></div>';
   };

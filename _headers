@@ -1,0 +1,14 @@
+# Used only if the site is deployed straight from the repo root (no build step).
+# The unbuilt CSS/JS keep the same file names between releases, so browsers must
+# re-check them on every visit; otherwise a new index.html can run with old CSS/JS.
+# The normal deploy is `npm run build` → dist/, which has its own _headers with
+# content-hashed file names that are safe to cache for a year.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+/css/*
+  Cache-Control: no-cache
+/js/*
+  Cache-Control: no-cache
+/fonts/*
+  Cache-Control: public, max-age=2592000

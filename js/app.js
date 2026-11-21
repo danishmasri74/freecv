@@ -16,7 +16,7 @@
     preview: $('preview'), guides: $('guides'), meta: $('preview-meta'), workspace: $('workspace'),
     templateSeg: $('template-seg'), paperSeg: $('paper-seg'), swatches: $('swatches'), pageStyle: $('page-style'),
     saveStatus: $('save-status'), toast: $('toast'), toastText: $('toast-text'), toastAction: $('toast-action'),
-    file: $('file-import'), menu: $('more-menu'), dlgPrint: $('dlg-print'), dlgAbout: $('dlg-about'),
+    file: $('file-import'), dlgPrint: $('dlg-print'), dlgAbout: $('dlg-about'),
     spacingSeg: $('spacing-seg'), sizeValue: $('size-value'), dlgSection: $('dlg-section'), presetGrid: $('preset-grid')
   };
 
@@ -70,12 +70,14 @@
   var ui = { openEntries: new Set(), active: 'personal' };
 
   var saveTimer = 0;
-  function setStatus(text, warn) {
-    els.saveStatus.textContent = text;
-    els.saveStatus.classList.toggle('is-warn', !!warn);
+  function setStatus(text, kind) {
+    $('save-text').textContent = text;
+    els.saveStatus.classList.toggle('is-warn', kind === 'warn');
+    els.saveStatus.classList.toggle('is-saving', kind === 'saving');
+    els.saveStatus.title = kind === 'warn' ? 'This browser is blocking storage, so changes are not kept. Download a backup.' : 'Your resume is saved in this browser';
   }
   function save() {
-    if (storageOk) setStatus('Saving…');
+    if (storageOk) setStatus('Saving…', 'saving');
     clearTimeout(saveTimer);
     saveTimer = setTimeout(flushSave, 300);
   }
@@ -85,8 +87,8 @@
     var entry = activeEntry();
     if (entry) { entry.person = (state.personal.name || '').trim(); entry.updatedAt = Date.now(); }
     ok = writeJSON(INDEX_KEY, index) && ok;
-    if (ok) setStatus('Saved in this browser');
-    else setStatus('Not saved: storage is blocked', true);
+    if (ok) setStatus('Saved');
+    else setStatus('Not saved', 'warn');
   }
   window.addEventListener('pagehide', flushSave);
   document.addEventListener('visibilitychange', function () { if (document.hidden) flushSave(); });
@@ -233,7 +235,7 @@
       if (done) return;
       done = true; previewQueued = false;
       renderPreview(); renderOutlineCounts();
-      $('switcher-name').textContent = displayName(activeEntry()); // name may follow the person's name
+      updateSwitcherLabel(); // the label may follow the person's name
     };
     requestAnimationFrame(run);
     setTimeout(run, 150);
@@ -289,8 +291,9 @@
     els.frame.style.width = (sheetW * scale) + 'px';
     els.frame.style.height = (sheet.offsetHeight * scale) + 'px';
 
-    els.meta.innerHTML = '<span>' + d.label + ' · ' + pages + ' page' + (pages > 1 ? 's' : '') +
-      (pages > 1 ? ' · dashed lines show roughly where pages break' : '') + '</span>' +
+    els.meta.classList.toggle('is-over', pages > 1);
+    els.meta.innerHTML = '<span title="' + (pages > 1 ? 'Dashed lines on the page show roughly where pages break' : '') + '">' +
+      pages + ' page' + (pages > 1 ? 's' : '') + '</span>' +
       (pages > 1 ? '<button type="button" class="fit-btn" data-fit>Fit to 1 page</button>' : '');
   }
 
@@ -329,7 +332,17 @@
     var spacingName = (FreeCV.SPACINGS.find(function (p) { return p.value === s.spacing; }) || {}).name || 'Custom';
     toast('Fitted to 1 page: ' + spacingName.toLowerCase() + ' spacing, ' + Math.round(s.size * 100) + '% text.', true);
   }
-  els.meta.addEventListener('click', function (e) { if (e.target.closest('[data-fit]')) fitToOnePage(); });
+  // Fit buttons live in the toolbar (when over a page) and in the Layout menu.
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('[data-fit]')) return;
+    closeMenus();
+    fitToOnePage();
+  });
+
+  function accentName(hex) {
+    var a = FreeCV.ACCENTS.find(function (x) { return x.value.toLowerCase() === hex.toLowerCase(); });
+    return a ? a.name : 'Custom';
+  }
 
   function applySettings() {
     var s = state.settings;
@@ -339,12 +352,25 @@
     els.pageStyle.textContent = '@page { size: ' + (s.paper === 'letter' ? 'letter' : 'A4') + '; margin: 15mm; }';
     els.templateSeg.querySelectorAll('[data-template]').forEach(function (b) { b.setAttribute('aria-checked', b.dataset.template === s.template); });
     els.paperSeg.querySelectorAll('[data-paper]').forEach(function (b) { b.setAttribute('aria-checked', b.dataset.paper === s.paper); });
-    els.spacingSeg.innerHTML = FreeCV.SPACINGS.map(function (p) {
-      return '<button type="button" role="radio" data-spacing="' + p.value + '" aria-checked="' + (p.value === s.spacing) + '">' + p.name + '</button>';
-    }).join('');
-    els.sizeValue.textContent = Math.round(s.size * 100) + '%';
+    if (!els.spacingSeg.children.length) {
+      els.spacingSeg.innerHTML = FreeCV.SPACINGS.map(function (p) {
+        return '<button type="button" role="radio" data-spacing="' + p.value + '">' + p.name + '</button>';
+      }).join('');
+    }
+    els.spacingSeg.querySelectorAll('[data-spacing]').forEach(function (b) { b.setAttribute('aria-checked', +b.dataset.spacing === s.spacing); });
+    var pct = Math.round(s.size * 100) + '%';
+    els.sizeValue.textContent = pct;
+    $('size-range').value = String(s.size * 100);
     document.querySelector('[data-size-step="-1"]').disabled = s.size <= FreeCV.SIZE_MIN + 1e-9;
     document.querySelector('[data-size-step="1"]').disabled = s.size >= FreeCV.SIZE_MAX - 1e-9;
+
+    // Toolbar button labels say what is currently chosen.
+    var spacingName = (FreeCV.SPACINGS.find(function (p) { return p.value === s.spacing; }) || { name: 'Custom' }).name;
+    $('template-value').textContent = s.template.charAt(0).toUpperCase() + s.template.slice(1);
+    $('accent-value').textContent = accentName(s.accent);
+    $('layout-value').textContent = (s.paper === 'letter' ? 'Letter' : 'A4') + ' · ' + spacingName + ' · ' + pct;
+    document.querySelector('.design-toolbar').style.setProperty('--accent-ui', s.accent);
+
     applyScale();
     renderSwatches();
   }
@@ -387,13 +413,15 @@
       var stale = meta.firstEditAt && now - meta.firstEditAt > 10 * 60e3 &&
         (!meta.lastExportAt || (meta.lastEditAt > meta.lastExportAt && now - meta.lastExportAt > 7 * DAY));
       warn = !!stale;
-      text = 'Your resume lives only in this browser. Last backup: ' + (meta.lastExportAt ? ago(meta.lastExportAt) : 'never') + '.';
+      text = 'Stored only in this browser. Last backup: ' + (meta.lastExportAt ? ago(meta.lastExportAt) : 'never') + '.';
     }
     document.querySelectorAll('[data-backup]').forEach(function (el) {
       el.classList.toggle('is-warn', warn);
-      el.innerHTML = '<span class="backup-text"></span><button type="button" data-export>Export a backup</button>';
+      // Only offer a download link when a backup is actually due; otherwise it's just a quiet line.
+      el.innerHTML = '<span class="backup-text"></span>' + (warn ? '<button type="button" data-export>Download a backup</button>' : '');
       el.firstChild.textContent = text;
     });
+    $('backup-foot').textContent = 'Last backup: ' + (meta.lastExportAt ? ago(meta.lastExportAt) : 'never');
   }
   document.addEventListener('click', function (e) { if (e.target.closest('[data-export]')) exportJSON(); });
 
@@ -521,8 +549,16 @@
     var sec = d.sec ? secById(d.sec) : null;
     var item = sec && d.item ? itemIn(sec, d.item) : null;
     var idx, lines, focus = null, structural = true;
+    var inMenu = btn.closest('details.menu');
+    if (inMenu) inMenu.open = false; // picking a menu item closes the menu
+    var menuFocus = sec ? { sel: '#sec-' + sec.id + ' .sec-menu > summary' } : null;
 
     switch (a) {
+      case 'rename-sec':
+        var title = $('title-' + sec.id);
+        if (title) { title.focus(); title.select(); }
+        return;
+
       case 'toggle-entry':
         if (ui.openEntries.has(d.item)) ui.openEntries.delete(d.item); else ui.openEntries.add(d.item);
         var entry = btn.closest('.entry');
@@ -579,7 +615,7 @@
       case 'down-sec':
         idx = state.sections.indexOf(sec);
         if (!move(state.sections, idx, idx + (a === 'up-sec' ? -1 : 1))) return;
-        focus = { sel: '[data-action="' + a + '"][data-sec="' + sec.id + '"]' };
+        focus = menuFocus;
         break;
 
       case 'add-section':
@@ -593,7 +629,7 @@
 
       case 'toggle-hide':
         sec.hidden = !sec.hidden;
-        focus = { sel: '[data-action="toggle-hide"][data-sec="' + sec.id + '"].icon-btn' };
+        focus = btn.closest('.f-hidden-note') ? { sel: '#title-' + sec.id } : menuFocus;
         break;
 
       default:
@@ -726,6 +762,7 @@
     if (!b) return;
     state.settings.template = b.dataset.template;
     applySettings(); edited();
+    closeMenus(); // one pick and the template menu is done
   });
   els.paperSeg.addEventListener('click', function (e) {
     var b = e.target.closest('[data-paper]');
@@ -739,18 +776,23 @@
     state.settings.spacing = parseFloat(b.dataset.spacing);
     applySettings(); edited();
   });
-  document.querySelector('.stepper').addEventListener('click', function (e) {
+  function setSize(v) {
+    state.settings.size = Math.min(FreeCV.SIZE_MAX, Math.max(FreeCV.SIZE_MIN, round3(v)));
+    applySettings();
+  }
+  document.querySelector('.size-row').addEventListener('click', function (e) {
     var b = e.target.closest('[data-size-step]');
     if (!b || b.disabled) return;
-    var s = state.settings;
-    s.size = Math.min(FreeCV.SIZE_MAX, Math.max(FreeCV.SIZE_MIN, round3(s.size + (+b.dataset.sizeStep) * FreeCV.SIZE_STEP)));
-    applySettings(); edited();
+    setSize(state.settings.size + (+b.dataset.sizeStep) * FreeCV.SIZE_STEP);
+    edited();
   });
+  $('size-range').addEventListener('input', function (e) { setSize(+e.target.value / 100); edited('typing'); });
   els.swatches.addEventListener('click', function (e) {
     var b = e.target.closest('[data-accent]');
     if (!b) return;
     state.settings.accent = b.dataset.accent;
     applySettings(); edited();
+    closeMenus();
   });
   els.swatches.addEventListener('input', function (e) {
     if (e.target.id !== 'accent-custom') return;
@@ -787,7 +829,7 @@
     meta.lastExportAt = Date.now();
     saveMeta();
     renderBackup();
-    toast('Backup saved. Use Import to load it later.');
+    toast('Backup file downloaded. To load it later, use Backup → Restore from backup.');
   }
 
   function importFile(file) {
@@ -808,8 +850,6 @@
     reader.readAsText(file);
   }
 
-  $('btn-export').addEventListener('click', exportJSON);
-  $('btn-import').addEventListener('click', function () { els.file.click(); });
   els.file.addEventListener('change', function () { importFile(els.file.files[0]); els.file.value = ''; });
 
   // Drag a backup file anywhere onto the page to import it.
@@ -823,18 +863,18 @@
     importFile(f);
   });
 
-  /* ---------- More menu ---------- */
+  /* ---------- Backup menu (every item explains itself; nothing downloads on a stray click) ---------- */
 
-  els.menu.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-menu]');
+  $('backup-menu').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-backup-act]');
     if (!b) return;
-    els.menu.open = false;
-    var m = b.dataset.menu;
-    if (m === 'import') els.file.click();
-    else if (m === 'export') exportJSON();
-    else if (m === 'about') els.dlgAbout.showModal();
-    else if (m === 'share') openShare();
+    closeMenus();
+    var act = b.dataset.backupAct;
+    if (act === 'export') exportJSON();
+    else if (act === 'import') els.file.click();
+    else if (act === 'share') openShare();
   });
+  document.addEventListener('click', function (e) { if (e.target.closest('[data-about]')) els.dlgAbout.showModal(); });
 
   /* ---------- Open on another device: the resume travels inside the link (#import=...) ---------- */
 
@@ -910,14 +950,23 @@
     });
   }
 
-  // Close any open dropdown (More, resume switcher) on outside click or Escape.
-  var menus = [els.menu, $('switcher')];
+  // Menus and popovers are <details>. Only one is open at a time; outside click or Escape closes them.
+  function openMenus() { return document.querySelectorAll('details.menu[open], details.pop[open]'); }
+  function closeMenus(except) {
+    openMenus().forEach(function (m) { if (!except || !m.contains(except)) m.open = false; });
+  }
   document.addEventListener('click', function (e) {
-    menus.forEach(function (m) { if (m.open && !m.contains(e.target)) m.open = false; });
+    if (!e.target.isConnected) return; // the clicked control was re-rendered inside an open menu
+    closeMenus(e.target);
   });
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
-    menus.forEach(function (m) { if (m.open) { m.open = false; m.querySelector('summary').focus(); } });
+    var open = openMenus();
+    if (!open.length) return;
+    var last = open[open.length - 1];
+    closeMenus();
+    var s = last.querySelector('summary');
+    if (s) s.focus();
   });
 
   /* ---------- Resume switcher: new, duplicate, rename, delete, switch ---------- */
@@ -934,14 +983,35 @@
     return ago(t);
   }
 
+  // Initials and a stable soft colour per resume, so versions are easy to tell apart.
+  var AVATAR_TONES = [['#E8EEF5', '#1F4E79'], ['#EDF3EF', '#2F5D34'], ['#F5EDEF', '#7A2E3A'], ['#F3EFE6', '#6B4E16'], ['#ECEEF2', '#3D4A5C'], ['#E9F2F1', '#0F6B66']];
+  function initials(name) {
+    var w = name.replace(/[^\p{L}\p{N} ]/gu, ' ').trim().split(/\s+/).filter(Boolean);
+    return ((w[0] || '?').charAt(0) + (w.length > 1 ? w[w.length - 1].charAt(0) : (w[0] || '').charAt(1) || '')).toUpperCase();
+  }
+  function avatarHtml(entry) {
+    var name = displayName(entry), h = 0;
+    for (var i = 0; i < entry.id.length; i++) h = (h * 31 + entry.id.charCodeAt(i)) >>> 0;
+    var t = AVATAR_TONES[h % AVATAR_TONES.length];
+    return { text: initials(name), bg: t[0], fg: t[1] };
+  }
+  function updateSwitcherLabel() {
+    var entry = activeEntry(), av = avatarHtml(entry), el = $('switcher-avatar');
+    $('switcher-name').textContent = displayName(entry);
+    el.textContent = av.text; el.style.background = av.bg; el.style.color = av.fg;
+    $('switcher-count').textContent = index.items.length > 1 ? '· ' + index.items.length + ' resumes' : '';
+  }
+
   function renderSwitcher() {
-    $('switcher-name').textContent = displayName(activeEntry());
+    updateSwitcherLabel();
     var items = index.items.slice().sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
     $('switcher-items').innerHTML = items.map(function (it) {
-      var cur = it.id === index.active;
+      var cur = it.id === index.active, av = avatarHtml(it);
       return '<button type="button" class="sw-item' + (cur ? ' is-current' : '') + '" data-res-id="' + it.id + '"' + (cur ? ' aria-current="true"' : '') + '>' +
-        '<span class="sw-name">' + FreeCV.esc(displayName(it)) + '</span>' +
-        '<span class="sw-meta">' + (cur ? 'Editing now' : 'Edited ' + ago2(it.updatedAt || 0)) + '</span></button>';
+        '<span class="avatar" aria-hidden="true" style="background:' + av.bg + ';color:' + av.fg + '">' + FreeCV.esc(av.text) + '</span>' +
+        '<span class="sw-text"><span class="sw-name">' + FreeCV.esc(displayName(it)) + '</span>' +
+        '<span class="sw-meta">' + (cur ? 'Editing now' : 'Edited ' + ago2(it.updatedAt || 0)) + '</span></span>' +
+        (cur ? '<svg class="ic sw-check" aria-hidden="true"><use href="#i-check"/></svg>' : '') + '</button>';
     }).join('');
     switcher.querySelector('[data-res="delete"]').disabled = index.items.length < 2;
   }
@@ -1090,7 +1160,7 @@
   renderAll();
   renderSwitcher();
   renderHistoryButtons();
-  if (!storageOk) setStatus('Not saved: storage is blocked', true);
+  if (!storageOk) setStatus('Not saved', 'warn');
   handleShareLink();
   window.addEventListener('hashchange', handleShareLink);
 })();

@@ -3,7 +3,7 @@
 A small, fast resume builder that is actually free, including the PDF export.
 
 - Runs entirely in the browser: no backend, no accounts, no tracking
-- Autosaves to `localStorage`; **Export** downloads a JSON backup, **Import** (or drag-and-drop) adds it back as a resume
+- Autosaves to `localStorage`; the **Backup** menu downloads a JSON backup file or restores one (or drag a file onto the page) as a new resume
 - Keep several resumes in one browser (new, from example, duplicate, rename, delete with undo)
 - Undo / redo for every change (Ctrl+Z, Ctrl+Shift+Z or Ctrl+Y); typing is grouped into one step
 - PDF via the browser's print dialog (Save as PDF), so text stays selectable and ATS-readable
@@ -11,7 +11,7 @@ A small, fast resume builder that is actually free, including the PDF export.
 - Spacing (Compact / Normal / Roomy), text size (85–110%) and a one-click **Fit to 1 page**
 - Add your own sections: Certifications, Awards, Volunteering, Publications, Languages, Interests, or blank ones
 - **Open on another device**: a link that carries the resume after `#` (compressed), so nothing is uploaded
-- No runtime dependencies: about 81 KB of minified code (25 KB gzipped), plus one 25–100 KB font for the chosen template
+- No runtime dependencies: about 94 KB of minified code (27 KB gzipped), plus one 25–100 KB font for the chosen template
 
 ## Run locally
 
@@ -34,6 +34,7 @@ npm run check
 - `npm run build` writes the deployable site to `dist/`: one minified, content-hashed JS file, one CSS file, compacted HTML, fonts, assets and a `_headers` file with long cache lifetimes for the hashed files.
 - `npm test` prints every template to PDF in headless Chromium and checks the extracted text: name, contact details and headings intact, no letter-spaced words, the example fits on one page, no app UI in the PDF, and letter-spacing within the ATS-safe limits below. It also round-trips a share link. Add `--src` (`node tests/pdf.test.mjs --src`) to test the unbuilt source.
 - GitHub Actions (`.github/workflows/check.yml`) runs both on every push to `main` and on pull requests.
+- The root `_headers` file only matters if the repo root is deployed without the build: it makes browsers re-check the unhashed CSS/JS on every visit, so a new `index.html` never runs with stale cached files.
 
 ## Files
 
