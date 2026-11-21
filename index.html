@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FreeCV — free resume builder with free PDF export</title>
+  <meta name="description" content="Build a clean, ATS-friendly resume in your browser and download it as a PDF. Free, no sign-up, no paywall on export. Your data never leaves your device.">
+  <meta name="theme-color" content="#1f3a5f">
+  <meta property="og:title" content="FreeCV — free resume builder">
+  <meta property="og:description" content="Free resume builder. No sign-up. PDF export is free, always.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f3a5f'/%3E%3Cpath d='M10 9h12M10 14h12M10 19h8' stroke='white' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/resume.css">
+  <style id="page-style">@page { size: A4; margin: 15mm; }</style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 5.1A10 10 0 0112 5c6.5 0 10 7 10 7a17 17 0 01-3.2 4.1M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7a9.7 9.7 0 005.4-1.6M9.9 9.9a3 3 0 004.2 4.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-pdf" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </svg>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"></span>
+      <span class="brand-name">FreeCV</span>
+      <span class="brand-tag">Free resume builder. Free PDF. No sign-up.</span>
+    </div>
+
+    <div class="controls" role="group" aria-label="Design">
+      <label class="ctl">
+        <span class="ctl-label">Template</span>
+        <select id="template">
+          <option value="classic">Classic</option>
+          <option value="modern">Modern</option>
+          <option value="minimal">Minimal</option>
+        </select>
+      </label>
+      <div class="ctl">
+        <span class="ctl-label" id="accent-label">Accent</span>
+        <div class="swatches" id="swatches" role="radiogroup" aria-labelledby="accent-label"></div>
+      </div>
+      <label class="ctl">
+        <span class="ctl-label">Paper</span>
+        <select id="paper">
+          <option value="a4">A4</option>
+          <option value="letter">Letter</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn" id="btn-import">Import</button>
+      <button type="button" class="btn" id="btn-export">Export</button>
+      <details class="menu" id="more-menu">
+        <summary class="btn" aria-label="More options">More</summary>
+        <div class="menu-list">
+          <button type="button" class="mobile-only" data-menu="import">Import JSON…</button>
+          <button type="button" class="mobile-only" data-menu="export">Export JSON</button>
+          <button type="button" data-menu="blank">Start blank</button>
+          <button type="button" data-menu="sample">Load example resume</button>
+          <button type="button" data-menu="about">About FreeCV</button>
+        </div>
+      </details>
+      <button type="button" class="btn btn-primary" id="btn-pdf"><svg class="ic"><use href="#i-pdf"/></svg>Download PDF</button>
+      <input type="file" id="file-import" accept="application/json,.json" hidden>
+    </div>
+  </header>
+
+  <div class="banner" id="banner" hidden>
+    <p id="banner-text"></p>
+    <div class="banner-actions">
+      <button type="button" class="btn btn-small btn-primary" id="banner-export">Export backup</button>
+      <button type="button" class="btn btn-small btn-ghost" id="banner-dismiss">Later</button>
+    </div>
+  </div>
+
+  <nav class="tabs" role="tablist" aria-label="View">
+    <button type="button" role="tab" id="tab-edit" aria-selected="true" data-view="edit">Edit</button>
+    <button type="button" role="tab" id="tab-preview" aria-selected="false" data-view="preview">Preview</button>
+  </nav>
+
+  <main class="workspace" id="workspace" data-view="edit">
+    <section class="editor" id="editor" aria-label="Resume editor"></section>
+
+    <section class="preview" id="preview" aria-label="Resume preview">
+      <div class="preview-meta" id="preview-meta"></div>
+      <div class="sheet-frame" id="sheet-frame">
+        <div class="sheet" id="sheet">
+          <article class="resume t-classic" id="resume"></article>
+          <div class="guides" id="guides" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+    <span id="toast-text"></span>
+    <button type="button" class="btn btn-small btn-ghost" id="toast-action" hidden>Undo</button>
+  </div>
+
+  <dialog id="dlg-print" class="dialog">
+    <h2>Save as PDF</h2>
+    <p>Your browser's print window will open. To get a clean PDF:</p>
+    <ol>
+      <li>Set <strong>Destination</strong> to <strong>Save as PDF</strong>.</li>
+      <li>Under <em>More settings</em>, turn <strong>off</strong> “Headers and footers”.</li>
+      <li>Keep <strong>Margins</strong> on Default and <strong>Scale</strong> at 100%.</li>
+    </ol>
+    <p class="muted">The text stays selectable, so applicant tracking systems (ATS) can read it.</p>
+    <label class="check"><input type="checkbox" id="print-tip-off"> Don't show this again</label>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+      <button type="button" class="btn btn-primary" id="print-go">Open print window</button>
+    </div>
+  </dialog>
+
+  <dialog id="dlg-about" class="dialog">
+    <h2>About FreeCV</h2>
+    <p>Lots of “free” resume builders charge you at the download step. FreeCV doesn't, and never will.</p>
+    <ul>
+      <li>No account, no sign-up, no tracking.</li>
+      <li>Your resume lives only in this browser (localStorage). Nothing is uploaded.</li>
+      <li>Use <strong>Export</strong> to save a backup file and <strong>Import</strong> to load it on another device or browser.</li>
+      <li>PDFs are made by your browser's print feature, so the text stays real text that ATS software can read.</li>
+    </ul>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-primary" data-close>Got it</button>
+    </div>
+  </dialog>
+
+  <script src="js/data.js"></script>
+  <script src="js/preview.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

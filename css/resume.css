@@ -1,0 +1,111 @@
+/* FreeCV — resume templates. Sizes in pt so screen preview matches the PDF. */
+
+.resume {
+  --accent: #1f3a5f;
+  --ink: #1b1b1b;
+  --ink-2: #4a4a4a;
+  color: var(--ink);
+  font-size: 10pt;
+  line-height: 1.4;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  overflow-wrap: anywhere;
+}
+
+.resume a { color: inherit; text-decoration: none; }
+.resume h1, .resume h2, .resume h3, .resume p, .resume ul { margin: 0; }
+
+.r-head { margin-bottom: 12pt; }
+.r-name { font-size: 22pt; line-height: 1.15; font-weight: 700; }
+.r-headline { font-size: 11pt; color: var(--ink-2); margin-top: 2pt; }
+.r-contact { font-size: 9pt; color: var(--ink-2); margin-top: 5pt; }
+.r-contact .sep { padding: 0 2pt; color: #999; }
+
+.r-sec { margin-top: 11pt; }
+.r-sec-title { font-size: 10.5pt; margin-bottom: 5pt; }
+.r-keep, .r-entry { break-inside: avoid; page-break-inside: avoid; }
+.r-sec-title { break-after: avoid; page-break-after: avoid; }
+
+.r-entry + .r-entry, .r-keep + .r-entry { margin-top: 7pt; }
+
+.r-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10pt; }
+.r-title { font-size: 10.5pt; font-weight: 700; }
+.r-date, .r-loc { flex: none; white-space: nowrap; font-size: 9.5pt; color: var(--ink-2); }
+.r-sub { color: var(--ink-2); }
+.r-org { font-weight: 600; color: var(--ink); }
+.r-link { font-size: 9.5pt; color: var(--ink-2); }
+
+.r-text p + p { margin-top: 4pt; }
+.r-list { padding-left: 13pt; margin-top: 3pt; }
+.r-list li { margin-top: 1.5pt; padding-left: 1pt; }
+.r-entry .r-text { margin-top: 3pt; }
+
+.r-skills { list-style: none; padding: 0; }
+.r-skills li + li { margin-top: 2.5pt; }
+.r-skills strong { font-weight: 650; }
+
+/* ---------- Classic: serif, centered header, ruled headings ---------- */
+
+.t-classic {
+  font-family: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, "Times New Roman", serif;
+  font-size: 10.5pt;
+}
+.t-classic .r-head { text-align: center; }
+.t-classic .r-name { font-weight: 700; letter-spacing: 0.01em; }
+.t-classic .r-headline { font-style: italic; }
+.t-classic .r-sec-title {
+  font-size: 10.5pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--accent);
+  border-bottom: 0.75pt solid var(--accent);
+  padding-bottom: 2pt;
+  margin-bottom: 6pt;
+}
+.t-classic .r-org { font-weight: 400; font-style: italic; }
+
+/* ---------- Modern: sans, accent name, label + hairline headings ---------- */
+
+.t-modern {
+  font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, "Noto Sans", sans-serif;
+}
+.t-modern .r-name { color: var(--accent); font-size: 24pt; letter-spacing: -0.01em; }
+.t-modern .r-headline { font-size: 11.5pt; font-weight: 500; color: var(--ink); }
+.t-modern .r-head { padding-bottom: 10pt; border-bottom: 2pt solid var(--accent); }
+.t-modern .r-sec-title {
+  display: flex; align-items: center; gap: 8pt;
+  font-size: 9.5pt; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--accent);
+}
+.t-modern .r-sec-title::after { content: ""; flex: 1; border-top: 0.75pt solid #d4d4d4; }
+.t-modern .r-list li::marker { color: var(--accent); }
+
+/* ---------- Minimal: quiet sans, lots of air, no rules ---------- */
+
+.t-minimal {
+  font-family: "Helvetica Neue", Helvetica, "Segoe UI", Arial, sans-serif;
+  font-size: 9.75pt;
+  line-height: 1.5;
+  --ink-2: #5c5c5c;
+}
+.t-minimal .r-name { font-size: 20pt; font-weight: 600; letter-spacing: -0.015em; }
+.t-minimal .r-headline { font-size: 10.5pt; }
+.t-minimal .r-contact a { color: var(--accent); }
+.t-minimal .r-sec { margin-top: 14pt; }
+.t-minimal .r-sec-title {
+  font-size: 8.5pt; font-weight: 600;
+  /* Keep tracking ≤ 0.1em: wider spacing makes PDF text extract as "S U M M A R Y", which ATS can't match. */
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--accent);
+  margin-bottom: 6pt;
+}
+.t-minimal .r-title { font-size: 10pt; font-weight: 600; }
+.t-minimal .r-org { font-weight: 400; }
+.t-minimal .r-list { padding-left: 11pt; }
+.t-minimal .r-list li::marker { content: "– "; color: #9a9a9a; }
+
+/* Empty-state hint inside the preview (screen only) */
+.r-empty { color: #8a8a8a; font-style: italic; font-family: system-ui, sans-serif; font-size: 10pt; text-align: center; padding: 40pt 0; }
+@media print { .r-empty { display: none; } }
