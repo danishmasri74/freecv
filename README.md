@@ -10,17 +10,30 @@ A small, fast resume builder that is actually free, including the PDF export.
 - Four ATS-friendly templates (Harbor, Ledger, Atlas, Quiet), accent colour, A4 / Letter
 - Spacing (Compact / Normal / Roomy), text size (85–110%) and a one-click **Fit to 1 page**
 - Add your own sections: Certifications, Awards, Volunteering, Publications, Languages, Interests, or blank ones
-- No build step, no dependencies: about 112 KB of unminified code (roughly 30 KB compressed over the wire), plus one 25–100 KB font for the chosen template
+- **Open on another device**: a link that carries the resume after `#` (compressed), so nothing is uploaded
+- No runtime dependencies: about 81 KB of minified code (25 KB gzipped), plus one 25–100 KB font for the chosen template
 
 ## Run locally
 
-Open `index.html` directly, or serve the folder:
+The source works as-is: open `index.html` directly, or serve the folder:
 
 ```powershell
 python -m http.server 5178
 ```
 
 Then visit http://localhost:5178.
+
+## Build and test
+
+```powershell
+npm install
+npx playwright install chromium
+npm run check
+```
+
+- `npm run build` writes the deployable site to `dist/`: one minified, content-hashed JS file, one CSS file, compacted HTML, fonts, assets and a `_headers` file with long cache lifetimes for the hashed files.
+- `npm test` prints every template to PDF in headless Chromium and checks the extracted text: name, contact details and headings intact, no letter-spaced words, the example fits on one page, no app UI in the PDF, and letter-spacing within the ATS-safe limits below. It also round-trips a share link. Add `--src` (`node tests/pdf.test.mjs --src`) to test the unbuilt source.
+- GitHub Actions (`.github/workflows/check.yml`) runs both on every push to `main` and on pull requests.
 
 ## Files
 
@@ -36,6 +49,8 @@ Then visit http://localhost:5178.
 | `js/app.js` | State, autosave, multi-resume storage, undo/redo, events, export/import, print, backup reminder |
 | `assets/og.png` | Share image (1200×630) used by the Open Graph / Twitter tags |
 | `tools/og-image.html` | Source for the share image; the regenerate command is in its comment |
+| `build.mjs` | Minifies and bundles the source into `dist/` (esbuild) |
+| `tests/pdf.test.mjs` | PDF/ATS checks for every template, plus the share link round trip |
 
 ### Storage
 
@@ -67,12 +82,13 @@ Scripts are plain `<script>` files that share a `window.FreeCV` namespace (not E
 
 1. Push this folder to a GitHub repo.
 2. Cloudflare dashboard → Workers & Pages → Create → Pages → connect the repo.
-   Framework preset: **None**. Build command: *(empty)*. Output directory: `/`.
+   Framework preset: **None**. Build command: `npm run build`. Output directory: `dist`.
+   (Already connected with the old settings? Change them under the project's Settings → Builds.)
 3. In the Pages project → Custom domains → add `cv.danishmasri.tech`.
    If the domain's DNS is on Cloudflare, the CNAME is created for you; otherwise add
    `CNAME cv → <project>.pages.dev` at your DNS provider.
 
-Netlify and Vercel work the same way: static site, no build command, publish the repo root.
+Netlify and Vercel work the same way: build command `npm run build`, publish directory `dist`.
 
 ## License
 

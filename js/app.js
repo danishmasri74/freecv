@@ -833,7 +833,82 @@
     if (m === 'import') els.file.click();
     else if (m === 'export') exportJSON();
     else if (m === 'about') els.dlgAbout.showModal();
+    else if (m === 'share') openShare();
   });
+
+  /* ---------- Open on another device: the resume travels inside the link (#import=...) ---------- */
+
+  var SHARE_PREFIX = '#import=';
+
+  function toB64url(bytes) {
+    var s = '';
+    for (var i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function fromB64url(str) {
+    var bin = atob(str.replace(/-/g, '+').replace(/_/g, '/'));
+    var out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  function pipe(bytes, stream) {
+    return new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer().then(function (b) { return new Uint8Array(b); });
+  }
+
+  // 'z' + deflate when the browser can compress, otherwise 'j' + plain UTF-8.
+  function encodeResume(obj) {
+    var bytes = new TextEncoder().encode(JSON.stringify(obj));
+    if (typeof CompressionStream === 'function') {
+      return pipe(bytes, new CompressionStream('deflate-raw')).then(function (z) { return 'z' + toB64url(z); });
+    }
+    return Promise.resolve('j' + toB64url(bytes));
+  }
+  function decodeResume(payload) {
+    var kind = payload.charAt(0), bytes = fromB64url(payload.slice(1));
+    var json = kind === 'z'
+      ? (typeof DecompressionStream === 'function'
+          ? pipe(bytes, new DecompressionStream('deflate-raw'))
+          : Promise.reject(new Error('This browser cannot open compressed links. Try a newer browser.')))
+      : kind === 'j' ? Promise.resolve(bytes) : Promise.reject(new Error('Unknown link format.'));
+    return json.then(function (b) { return FreeCV.normalize(JSON.parse(new TextDecoder().decode(b))); });
+  }
+
+  function openShare() {
+    flushSave();
+    $('share-name').textContent = displayName(activeEntry());
+    $('share-link').value = 'Making link…';
+    $('share-native').hidden = typeof navigator.share !== 'function';
+    $('dlg-share').showModal();
+    encodeResume(state).then(function (payload) {
+      var url = location.origin + location.pathname + SHARE_PREFIX + payload;
+      $('share-link').value = url;
+      $('share-link').select();
+    }).catch(function () { $('share-link').value = 'Sorry, this browser could not make the link.'; });
+  }
+  $('share-copy').addEventListener('click', function () {
+    var link = $('share-link').value;
+    var done = function () { toast('Link copied. Paste it into a message to yourself.'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, function () { $('share-link').select(); });
+    else { $('share-link').select(); try { document.execCommand('copy'); done(); } catch (e) { /* user can copy manually */ } }
+  });
+  $('share-native').addEventListener('click', function () {
+    navigator.share({ title: 'My resume (FreeCV)', url: $('share-link').value }).catch(function () { /* cancelled */ });
+  });
+
+  // Opened from a share link: offer to add the resume, then remove it from the address bar.
+  function handleShareLink() {
+    if (location.hash.indexOf(SHARE_PREFIX) !== 0) return;
+    var payload = location.hash.slice(SHARE_PREFIX.length);
+    history.replaceState(null, '', location.pathname + location.search); // keep the resume out of history
+    decodeResume(payload).then(function (data) {
+      var who = (data.personal.name || '').trim() || 'a resume';
+      if (!confirm('Add the shared resume for ' + who + ' to this browser?\n\nIt is added as a new resume; nothing you already have is changed.')) return;
+      createResume(data, '');
+      toast('Added “' + displayName(activeEntry()) + '” from the link.');
+    }).catch(function (err) {
+      toast(err && /browser|format/.test(err.message) ? err.message : 'That link looks damaged or incomplete, so nothing was added.');
+    });
+  }
 
   // Close any open dropdown (More, resume switcher) on outside click or Escape.
   var menus = [els.menu, $('switcher')];
@@ -1016,4 +1091,6 @@
   renderSwitcher();
   renderHistoryButtons();
   if (!storageOk) setStatus('Not saved: storage is blocked', true);
+  handleShareLink();
+  window.addEventListener('hashchange', handleShareLink);
 })();

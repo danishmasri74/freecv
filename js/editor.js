@@ -155,6 +155,6 @@
       }).join('') +
       '<hr class="f-rule"><button type="button" class="add-section" data-action="add-section">+ Add section</button>' +
       '<div class="editor-foot"><div class="backup" data-backup></div>' +
-      '<p>Saved automatically in this browser. FreeCV is free, with no paywall on PDF export.</p></div>';
+      '<p class="trust">Free forever · <a href="https://github.com/danishmasri74/freecv" target="_blank" rel="noopener">Open source</a> · Your data never leaves this browser</p></div>';
   };
 })();

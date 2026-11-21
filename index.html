@@ -72,6 +72,7 @@
         <div class="menu-list">
           <button type="button" class="show-sm" data-menu="import">Import backup…</button>
           <button type="button" class="show-sm" data-menu="export">Export backup</button>
+          <button type="button" data-menu="share">Open on another device…</button>
           <button type="button" data-menu="about">About FreeCV</button>
         </div>
       </details>
@@ -92,6 +93,7 @@
       <button type="button" class="outline-add" data-open-add>+ Add section</button>
       <p class="outline-hint">Drag to reorder</p>
       <div class="backup" data-backup></div>
+      <p class="outline-trust">Free forever · <a href="https://github.com/danishmasri74/freecv" target="_blank" rel="noopener">Open source</a><br>Your data never leaves this browser</p>
     </nav>
 
     <section class="editor" id="editor" aria-label="Resume editor"></section>
@@ -171,6 +173,21 @@
     </form>
   </dialog>
 
+  <dialog id="dlg-share" class="dialog">
+    <h2>Open on another device</h2>
+    <p>This link carries your whole resume inside it. Open it on your phone or another computer to add the resume there, with no account and no upload. The part after <code>#</code> never reaches any server.</p>
+    <label class="field">
+      <span class="field-label">Link to “<span id="share-name"></span>”</span>
+      <textarea class="input share-link" id="share-link" rows="3" readonly></textarea>
+    </label>
+    <p class="hint share-warn">Anyone who has this link can read your resume. Send it only to yourself, for example by email or in a chat with yourself.</p>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-text" data-close>Close</button>
+      <button type="button" class="btn btn-text" id="share-native" hidden>Share…</button>
+      <button type="button" class="btn btn-primary" id="share-copy">Copy link</button>
+    </div>
+  </dialog>
+
   <dialog id="dlg-about" class="dialog">
     <h2>About FreeCV</h2>
     <p>Lots of “free” resume builders charge you at the download step. FreeCV doesn't, and never will.</p>
@@ -179,6 +196,7 @@
       <li>Your resume lives only in this browser. Nothing is uploaded.</li>
       <li>Use <strong>Export</strong> to save a backup file and <strong>Import</strong> to load it on another device or browser.</li>
       <li>PDFs come from your browser's print feature, so the text stays real text that ATS software can read.</li>
+      <li>FreeCV is open source under the MIT licence: <a href="https://github.com/danishmasri74/freecv" target="_blank" rel="noopener">github.com/danishmasri74/freecv</a>.</li>
     </ul>
     <div class="dialog-actions">
       <button type="button" class="btn btn-primary" data-close>Got it</button>

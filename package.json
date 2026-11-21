@@ -1,0 +1,18 @@
+{
+  "name": "freecv",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A small, fast resume builder that is actually free, including the PDF export.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node tests/pdf.test.mjs",
+    "check": "npm run build && npm test"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "pdfjs-dist": "^6.5.438",
+    "playwright": "^1.65.1"
+  }
+}
