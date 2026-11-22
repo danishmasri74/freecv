@@ -98,21 +98,25 @@ try {
     });
     check(`template font "${font.fam}" is loaded before printing`, font.loaded);
 
-    // Tracking rules from resume.css: tight tracking loses word spaces ("AisyahRahman"),
-    // wide tracking on caps splits words ("S U M M A R Y"). Check every element on the page.
+    // No letter-spacing anywhere on the resume. Firefox writes letter-spaced text one glyph at a
+    // time, so even 0.04em on a heading extracts as "S U M M A R Y"; tight tracking can glue
+    // words ("AisyahRahman"). Chrome hides both, so check the CSS itself, not just Chrome's PDF.
     const tracking = await page.evaluate(() => {
       const bad = [];
       document.querySelectorAll('#resume *').forEach((el) => {
         if (!el.textContent.trim()) return;
         const cs = getComputedStyle(el);
-        const fs = parseFloat(cs.fontSize);
-        const ls = cs.letterSpacing === 'normal' ? 0 : parseFloat(cs.letterSpacing) / fs;
-        if (ls < -0.0151) bad.push(`${el.className || el.tagName}: ${ls.toFixed(3)}em (tighter than -0.015em)`);
-        if (cs.textTransform === 'uppercase' && ls > 0.1001) bad.push(`${el.className || el.tagName}: ${ls.toFixed(3)}em on uppercase (wider than 0.1em)`);
+        const ls = cs.letterSpacing === 'normal' ? 0 : parseFloat(cs.letterSpacing);
+        if (Math.abs(ls) > 0.01) bad.push(`${el.className || el.tagName}: letter-spacing ${cs.letterSpacing}`);
+        const ws = cs.wordSpacing === 'normal' ? 0 : parseFloat(cs.wordSpacing);
+        if (Math.abs(ws) > 0.01) bad.push(`${el.className || el.tagName}: word-spacing ${cs.wordSpacing}`);
+        // Firefox prints CSS-uppercased text one letter at a time; capitals must be real text.
+        if (cs.textTransform !== 'none') bad.push(`${el.className || el.tagName}: text-transform ${cs.textTransform}`);
+        if (cs.fontVariantCaps && cs.fontVariantCaps !== 'normal') bad.push(`${el.className || el.tagName}: font-variant-caps ${cs.fontVariantCaps}`);
       });
       return [...new Set(bad)];
     });
-    check('letter-spacing stays inside ATS-safe limits', tracking.length === 0, tracking.join('; '));
+    check('no letter-spacing, word-spacing, CSS uppercase or small caps on resume text', tracking.length === 0, tracking.join('; '));
 
     const pdf = await page.pdf({ preferCSSPageSize: true, printBackground: true });
     const { pages, text } = await pdfText(pdf);
@@ -131,44 +135,7 @@ try {
     await page.close();
   }
 
-  // The preview's pages must match the printed PDF page for page (count and where each page starts/ends).
-  for (const tpl of TEMPLATES) {
-    console.log(`\npreview pages = PDF pages (${tpl}, longer resume)`);
-    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-    page.on('pageerror', (e) => errors.push(`${tpl} pages: ${e.message}`));
-    await loadExample(page, tpl, (data) => {
-      const exp = data.sections.find((s) => s.type === 'experience');
-      for (let i = 0; i < 3; i++) {
-        exp.items.push({ id: 'x' + i, role: `Software Engineer ${i + 1}`, org: `Company ${i + 1}`, location: 'Penang', start: '2016', end: '2018',
-          bullets: Array(4).fill(`Delivered improvement number ${i + 1} that moved a key product metric by a clear, measurable amount`).join('\n') });
-      }
-    });
-    const preview = await page.evaluate(() => [...document.querySelectorAll('#pages .page-sheet')].map((p) => {
-      const lines = p.innerText.split('\n').map((l) => l.trim()).filter(Boolean);
-      return { first: lines[0], last: lines[lines.length - 1] };
-    }));
-    const pdfPages = [];
-    {
-      const doc = await getDocument({ data: new Uint8Array(await page.pdf({ preferCSSPageSize: true, printBackground: true })), verbosity: 0 }).promise;
-      for (let i = 1; i <= doc.numPages; i++) {
-        const tc = await (await doc.getPage(i)).getTextContent();
-        pdfPages.push(tc.items.map((it) => it.str).join(' ').replace(/\s+/g, ' '));
-      }
-    }
-    check('resume runs past one page (test setup)', preview.length > 1, `${preview.length} preview page(s)`);
-    check('preview shows as many pages as the PDF has', preview.length === pdfPages.length, `preview ${preview.length}, PDF ${pdfPages.length}`);
-    const norm = (t) => (t || '').replace(/\s+/g, ' ').toLowerCase(); // Ledger's small caps print as capitals
-    preview.forEach((pg, i) => {
-      const pdf = (pdfPages[i] || '').toLowerCase();
-      check(`page ${i + 1} starts and ends on the same lines as the PDF`, pdf.includes(norm(pg.first)) && pdf.includes(norm(pg.last)),
-        `preview page ${i + 1}: "${pg.first}" … "${pg.last}"\n      PDF page ${i + 1}: "${pdf.slice(0, 70)}" … "${pdf.slice(-60)}"`);
-    });
-    const spacedAll = pdfPages.join(' ').match(/\b(?:[A-Za-z] ){4,}[A-Za-z]\b/);
-    check('no letter-spaced words on any page', !spacedAll, spacedAll && `found "${spacedAll[0]}"`);
-    const meta = (await page.textContent('#preview-meta')).trim();
-    check('toolbar page count matches', meta.startsWith(`${pdfPages.length} pages`), meta);
-    await page.close();
-  }
+  // (Preview pages vs printed PDF pages are checked in depth by tests/pagination.test.mjs.)
 
   // Share link round trip: make a link in one browser profile, open it in a fresh one.
   console.log('\nshare link');

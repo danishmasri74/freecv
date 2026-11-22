@@ -32,7 +32,8 @@ npm run check
 ```
 
 - `npm run build` writes the deployable site to `dist/`: one minified, content-hashed JS file, one CSS file, compacted HTML, fonts, assets and a `_headers` file with long cache lifetimes for the hashed files.
-- `npm test` prints every template to PDF in headless Chromium and checks the extracted text: name, contact details and headings intact, no letter-spaced words, the example fits on one page, no app UI in the PDF, and letter-spacing within the ATS-safe limits below. It also round-trips a share link. Add `--src` (`node tests/pdf.test.mjs --src`) to test the unbuilt source.
+- `npm test` prints every template to PDF in headless Chromium and checks the extracted text: name, contact details and headings intact, no letter-spaced words, the example fits on one page, no app UI in the PDF, and no letter- or word-spacing on resume text. It also round-trips a share link. Add `--src` (`node tests/pdf.test.mjs --src`) to test the unbuilt source.
+- `tests/pagination.test.mjs` (part of `npm test`) checks that the on-screen page preview matches the printed PDF page for page, on **A4 and Letter**, for all four templates: 1 to 5 pages, an entry or a paragraph taller than a page, a tall first entry under a heading, compact 85% and roomy 110% text, custom and hidden sections, a blank resume, long unbreakable links, a wrapping header, and a sweep that moves content down one line at a time so page breaks land at every position (368 comparisons). `npm run test:quick` skips the sweep.
 - GitHub Actions (`.github/workflows/check.yml`) runs both on every push to `main` and on pull requests.
 - The root `_headers` file only matters if the repo root is deployed without the build: it makes browsers re-check the unhashed CSS/JS on every visit, so a new `index.html` never runs with stale cached files.
 
@@ -52,6 +53,7 @@ npm run check
 | `tools/og-image.html` | Source for the share image; the regenerate command is in its comment |
 | `build.mjs` | Minifies and bundles the source into `dist/` (esbuild) |
 | `tests/pdf.test.mjs` | PDF/ATS checks for every template, plus the share link round trip |
+| `tests/pagination.test.mjs` | Preview pages vs printed PDF pages, on A4 and Letter, across edge cases |
 
 ### Storage
 
@@ -74,11 +76,14 @@ Scripts are plain `<script>` files that share a `window.FreeCV` namespace (not E
 - Vertical spacing between header, sections and entries is written as `calc(Npt * var(--sp))` so the spacing setting scales it; text size is CSS `zoom` on `.resume` (page margins stay fixed).
 - Section types with `multiple: true` in `data.js` (`custom`, `list`) can be added any number of times and deleted; the built-in sections can only be hidden.
 - Backups from older versions map `classic` → Ledger, `modern` → Harbor, `minimal` → Quiet (see `normalize` in `data.js`).
-- Don't track names tighter than about `-0.015em`: PDF text then loses the space and reads `AisyahRahman`.
 - `.r-entry` and `.r-keep` use `break-inside: avoid`, so entries and section headings never split across pages.
 - Don't use `font-variant: small-caps`: the bundled fonts have no real small caps, so browsers fake them letter by letter and PDF text reads `e d u c a t i o n`.
-- Keep uppercase heading `letter-spacing` at **0.1em or less**. Wider tracking makes PDF text extract as `S U M M A R Y`.
+- **No `letter-spacing` or `word-spacing` on resume text.** Firefox writes spaced text one letter at a time, so even a little tracking on a heading makes its PDF text read `S U M M A R Y`, and tight tracking can glue words (`AisyahRahman`). Chrome hides both problems, so `npm test` checks the CSS itself.
 - Page margins come from `@page { margin: 15mm }`, which `app.js` rewrites when the paper size changes.
+
+### How the page preview works
+
+The resume is rendered once off-screen as a single flowing document (`#resume`, inside `.print-source`), at the printed width with the template's fonts. That same element is what gets printed. `computeBreaks()` in `app.js` finds where the browser will break it: the header, each `.r-keep` (a heading with its first entry, or a whole small section) and each `.r-entry` stay together and move to the next page when they don't fit. A block taller than a whole page gets the `.r-split` class so print may break it between lines (keeping at least 2 lines of a paragraph together), and the preview breaks it at the same line. Each preview page is then a clipped window onto a copy of that document, so what you see on page 2 is exactly what prints on page 2. Users should keep the print dialog's margins on Default, scale at 100% and paper size matching FreeCV; the Save as PDF tip says so.
 
 ## Deploy (Cloudflare Pages → cv.danishmasri.tech)
 

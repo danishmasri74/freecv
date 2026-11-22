@@ -260,66 +260,141 @@
   function contentHeight() { return (paperDims().h - 2 * MARGIN_MM) * MM; }
 
   /*
-   * Pagination. The off-screen print source (#resume) is one flowing document. Print keeps
-   * the header, each .r-keep (a heading + its first entry, or a whole small section) and each
-   * .r-entry on one page, so those are our unbreakable blocks. A block that would run past the
-   * bottom of the page starts the next one, exactly like the browser does when printing.
+   * Pagination. The off-screen print source (#resume) is one flowing document, laid out at the
+   * printed width with the template's real fonts. We find where the browser will break it into
+   * pages, then draw each page as a window onto that same document. Print keeps the header, each
+   * .r-keep (a heading with its first entry, or a whole small section) and each .r-entry on one
+   * page; a block that would run past the bottom of the page moves to the next one. A block
+   * taller than a whole page cannot be kept together, so it is split between lines (bullets,
+   * paragraphs), just as the browser does.
    */
   function blocksOf(article) {
     var out = [];
     Array.prototype.forEach.call(article.children, function (el) {
       if (el.tagName === 'SECTION' && !el.classList.contains('r-keep')) {
-        Array.prototype.forEach.call(el.children, function (c) { out.push({ el: c, section: el }); });
+        Array.prototype.forEach.call(el.children, function (c) { out.push(c); });
       } else {
-        out.push({ el: el, section: null });
+        out.push(el);
       }
     });
     return out;
   }
 
-  // Returns an array of pages, each an array of blocks (measured with the current text size and spacing).
-  function computePages() {
-    var top0 = els.resume.getBoundingClientRect().top;
-    var limit = contentHeight() + 0.5; // half a pixel of slack for rounding
-    var pages = [], start = 0;
-    blocksOf(els.resume).forEach(function (b) {
-      var r = b.el.getBoundingClientRect();
-      b.top = r.top - top0;
-      b.bottom = r.bottom - top0;
-      if (!pages.length || b.bottom - start > limit) { pages.push([]); start = b.top; }
-      pages[pages.length - 1].push(b);
+  // Rendered text lines inside a block, used only when a block is taller than a page.
+  // Each line knows its paragraph (bullet, paragraph, heading...) so we can respect
+  // the print rule of keeping at least 2 lines of a paragraph together (orphans/widows).
+  var LEAF_SELECTOR = 'li, p, h1, h2, h3, .r-org, .r-loc, .r-date, .r-link, .r-skill, .r-contact';
+  function linesOf(el, top0) {
+    var lines = [];
+    var leaves = [];
+    el.querySelectorAll(LEAF_SELECTOR).forEach(function (n) { if (!n.querySelector(LEAF_SELECTOR)) leaves.push(n); });
+    if (!leaves.length) leaves = [el];
+    var zoom = state.settings.size || 1; // rects are zoomed; computed line-height is not
+    leaves.forEach(function (leaf, li) {
+      var range = document.createRange();
+      range.selectNodeContents(leaf);
+      // Text rects only cover the letters; print reserves the whole line box (line-height),
+      // so grow each row to its full line height around its middle.
+      var lh = parseFloat(getComputedStyle(leaf).lineHeight) * zoom;
+      var rows = [];
+      Array.prototype.forEach.call(range.getClientRects(), function (r) {
+        if (!r.height) return;
+        var t = r.top - top0, b = r.bottom - top0;
+        if (lh > r.height) { var mid = (t + b) / 2; t = mid - lh / 2; b = mid + lh / 2; }
+        // Inline pieces on the same row (bold text, links) share one line.
+        var row = rows.find(function (x) { return Math.abs(x.top - t) < 2; });
+        if (row) { row.top = Math.min(row.top, t); row.bottom = Math.max(row.bottom, b); } else rows.push({ top: t, bottom: b });
+      });
+      rows.sort(function (a, b) { return a.top - b.top; });
+      rows.forEach(function (row, k) { lines.push({ top: row.top, bottom: row.bottom, leaf: li, k: k, n: rows.length }); });
     });
-    return pages.length ? pages : [[]];
+    return lines.sort(function (a, b) { return a.top - b.top; });
   }
-  function countPages() { return computePages().length; }
 
-  // Build the visible page sheets from clones of the measured blocks.
+  // Where the next page starts inside a too-tall block, given the current page start.
+  function breakInside(lines, start, limit) {
+    for (var i = 0; i < lines.length; i++) {
+      var L = lines[i];
+      if (L.top < start - 0.5 || L.bottom - start <= limit) continue;
+      // L is the first line that does not fit. Keep at least 2 lines of its paragraph on each side.
+      var k = L.k;
+      if (k > 0 && L.n - k < 2) k = L.n - 2;          // widows: move lines down so 2 start the next page
+      if (k > 0 && k < 2) k = 0;                       // orphans: don't leave 1 line behind
+      var j = i - (L.k - k);                           // index of the line that will start the next page
+      if (j >= 0 && lines[j].top > start + 0.5) return lines[j].top;
+      return L.top > start + 0.5 ? L.top : null;       // rules can't be met: break at the line itself
+    }
+    return null;
+  }
+
+  var IS_FIREFOX = typeof CSS !== 'undefined' && CSS.supports && CSS.supports('-moz-appearance', 'none');
+  function hasGridEntry(el) {
+    var e = el.classList.contains('r-entry') ? el : el.querySelector('.r-entry');
+    return !!e && getComputedStyle(e).display === 'grid';
+  }
+
+  // Returns the pages as [{ start, end }] in px from the top of the document (current text size and spacing).
+  function computeBreaks() {
+    var box = els.resume.getBoundingClientRect();
+    var top0 = box.top, total = box.height;
+    var limit = contentHeight() + 0.5; // half a pixel of slack for rounding
+    var starts = [0], start = 0;
+
+    blocksOf(els.resume).forEach(function (el) {
+      var r = el.getBoundingClientRect();
+      var top = r.top - top0, bottom = r.bottom - top0;
+      var tall = bottom - top > limit;
+      // A block taller than a page can't be kept together. Mark it so print may break it between
+      // lines (resume.css: .r-split). Otherwise Chrome pushes it to a new page and, inside a
+      // heading + first-entry group, can even leave the heading alone on the previous page.
+      el.classList.toggle('r-split', tall);
+      el.querySelectorAll('.r-entry').forEach(function (e) { e.classList.toggle('r-split', tall); });
+      if (bottom - start <= limit) return;            // fits on the current page
+      if (!tall) {                                    // fits on a page of its own: move it down
+        start = top; starts.push(start);
+        return;
+      }
+      // Taller than a page: Chrome continues it on the current page and breaks between lines.
+      // Firefox can't start breaking a grid entry part-way down a page, so it first moves it to a
+      // fresh page. The preview follows the browser you're in, which is the one that prints.
+      if (IS_FIREFOX && top > start + 0.5 && hasGridEntry(el)) { start = top; starts.push(start); }
+      var lines = linesOf(el, top0);
+      while (bottom - start > limit) {
+        var next = breakInside(lines, start, limit);
+        if (next === null || next <= start) next = start + limit; // nothing to break between: cut at the page edge
+        start = next; starts.push(start);
+      }
+    });
+
+    return starts.map(function (s, i) {
+      var end = i + 1 < starts.length ? starts[i + 1] : total;
+      return { start: s, end: Math.min(end, s + limit) };
+    });
+  }
+  function countPages() { return computeBreaks().length; }
+  // Read-only hook for tests and debugging: the page windows, in px from the top of the document.
+  FreeCV.pageBreaks = function () { return computeBreaks(); };
+
+  // Draw each page as a clipped window onto a copy of the flowing document.
   function buildPages(pages) {
     var frag = document.createDocumentFragment();
     var sheetClass = els.sheet.className.replace('print-source', '').trim() + ' page-sheet';
-    var limit = contentHeight() + 0.5;
-    pages.forEach(function (blocks, i) {
+    pages.forEach(function (pg, i) {
       var wrap = document.createElement('div');
       wrap.className = 'page-wrap';
       var sheet = document.createElement('div');
       sheet.className = sheetClass;
-      var art = els.resume.cloneNode(false); // same template class and --accent / --sp / --zoom
+      var clip = document.createElement('div');
+      clip.className = 'page-clip';
+      clip.style.height = Math.max(0, pg.end - pg.start) + 'px';
+      var mover = document.createElement('div'); // not zoomed, so the offset is in page pixels
+      mover.className = 'page-move';
+      mover.style.top = -pg.start + 'px';
+      var art = els.resume.cloneNode(true); // same template class and --accent / --sp / --zoom
       art.removeAttribute('id');
-      if (!blocks.length) art.innerHTML = els.resume.innerHTML; // empty-state hint
-      var lastSection = null, sectionClone = null;
-      blocks.forEach(function (b) {
-        if (!b.section) { art.appendChild(b.el.cloneNode(true)); lastSection = null; return; }
-        // A section that continues from the previous page gets a fresh wrapper (no heading repeated).
-        if (b.section !== lastSection) {
-          sectionClone = b.section.cloneNode(false);
-          art.appendChild(sectionClone);
-          lastSection = b.section;
-        }
-        sectionClone.appendChild(b.el.cloneNode(true));
-      });
-      // One block taller than a whole page (very rare): let the sheet grow rather than hide text.
-      if (blocks.length && blocks[blocks.length - 1].bottom - blocks[0].top > limit) sheet.classList.add('is-tall');
-      sheet.appendChild(art);
+      mover.appendChild(art);
+      clip.appendChild(mover);
+      sheet.appendChild(clip);
       wrap.appendChild(sheet);
       if (pages.length > 1) {
         var label = document.createElement('p');
@@ -335,7 +410,7 @@
   // Paginate, draw the pages scaled to the preview column, and update the page count.
   var lastPages = 1;
   function layoutSheet() {
-    var pages = computePages();
+    var pages = computeBreaks();
     lastPages = pages.length;
 
     if (els.preview.offsetParent) { // skip drawing while the preview is hidden (phone Edit tab)
@@ -353,8 +428,10 @@
     }
 
     var n = pages.length;
+    var tooTall = els.resume.querySelector('.r-split');
     els.meta.classList.toggle('is-over', n > 1);
     els.meta.innerHTML = '<span>' + n + ' page' + (n > 1 ? 's' : '') + '</span>' +
+      (tooTall ? '<span class="tool-warn" title="One entry is taller than a whole page, so it has to break across pages. Consider splitting it into two entries or trimming bullets.">· an entry is longer than a page</span>' : '') +
       (n > 1 ? '<button type="button" class="fit-btn" data-fit>Fit to 1 page</button>' : '');
   }
 
@@ -1188,6 +1265,7 @@
   $('btn-pdf').addEventListener('click', function () {
     if (meta.printTipSeen) { doPrint(); return; }
     $('print-tip-off').checked = false;
+    $('print-paper').textContent = state.settings.paper === 'letter' ? 'Letter' : 'A4';
     els.dlgPrint.showModal();
   });
   $('print-go').addEventListener('click', function () {

@@ -2,7 +2,10 @@
  *
  * ATS rules every template keeps:
  *  - one reading order (the markup order), real text only, no icons or images
- *  - uppercase headings tracked at 0.1em or less (wider extracts as "S U M M A R Y")
+ *  - no letter-spacing at all: Firefox writes spaced text one letter at a time, so PDF text reads
+ *    "S U M M A R Y" (and tight tracking can glue words: "AisyahRahman")
+ *  - no text-transform: uppercase; templates with capital headings get real capitals from preview.js
+ *    (Firefox prints CSS-uppercased text one letter at a time: "S U M M A R Y")
  *  - grey text no lighter than #5c5c5c
  */
 
@@ -44,10 +47,14 @@
 .r-contact { font-size: 9pt; color: var(--ink-2); }
 .r-contact .sep { color: #8a8a8a; }
 
-.r-sec + .r-sec { margin-top: calc(15pt * var(--sp)); }
+/* Gaps between sections and entries are padding, not margin: browsers disagree on dropping a margin
+   at the top of a new page (Chrome drops it, Firefox keeps it), but padding is kept by all of them. */
+.r-sec + .r-sec { padding-top: calc(15pt * var(--sp)); }
 .r-sec-title { margin-bottom: calc(8pt * var(--sp)); break-after: avoid; page-break-after: avoid; }
 .r-keep, .r-entry { break-inside: avoid; page-break-inside: avoid; }
-.r-entry + .r-entry, .r-keep + .r-entry, .r-keep > .r-entry + .r-entry { margin-top: calc(9pt * var(--sp)); }
+/* Set by app.js on a block taller than a whole page: it can't stay together, so let it break between lines. */
+.r-split, .r-split .r-entry, .r-entry.r-split { break-inside: auto; page-break-inside: auto; }
+.r-entry + .r-entry, .r-keep + .r-entry, .r-keep > .r-entry + .r-entry { padding-top: calc(9pt * var(--sp)); }
 
 /* Entry parts: title, org, loc, date, body. Default layout (Ledger-like):
  *   title ........ date
@@ -88,19 +95,19 @@
   flex-direction: row; justify-content: space-between; align-items: flex-end; gap: 18pt;
   padding-bottom: calc(10pt * var(--sp)); border-bottom: 1.25pt solid var(--ink); margin-bottom: calc(13pt * var(--sp));
 }
-.t-harbor .r-name { font-size: 26pt; line-height: 1.05; letter-spacing: -0.015em; }
+.t-harbor .r-name { font-size: 26pt; line-height: 1.05; }
 .t-harbor .r-headline { font-size: 11.5pt; }
 .t-harbor .r-contact {
   display: flex; flex-direction: column; align-items: flex-end;
   text-align: right; line-height: 1.45; max-width: 48%; flex: none;
 }
 .t-harbor .r-contact .sep { display: none; }
-.t-harbor .r-sec + .r-sec { margin-top: calc(13pt * var(--sp)); }
+.t-harbor .r-sec + .r-sec { padding-top: calc(13pt * var(--sp)); }
 .t-harbor .r-sec-title {
-  font-size: 8.75pt; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  font-size: 8.75pt; font-weight: 700;
   color: var(--accent); padding-bottom: 3pt; border-bottom: 0.75pt solid var(--rule); margin-bottom: calc(7pt * var(--sp));
 }
-.t-harbor .r-entry + .r-entry, .t-harbor .r-keep + .r-entry { margin-top: calc(8pt * var(--sp)); }
+.t-harbor .r-entry + .r-entry, .t-harbor .r-keep + .r-entry { padding-top: calc(8pt * var(--sp)); }
 .t-harbor .r-entry {
   grid-template-columns: var(--gutter) minmax(0, 1fr);
   grid-template-areas: "date title" "loc org" ". body";
@@ -127,14 +134,14 @@
 }
 .t-ledger .r-head { align-items: center; text-align: center; gap: 4pt; padding-bottom: calc(11pt * var(--sp)); border-bottom: 3px double var(--accent); }
 .t-ledger .r-id { align-items: center; }
-.t-ledger .r-name { font-size: 25pt; font-weight: 600; letter-spacing: 0.01em; }
+.t-ledger .r-name { font-size: 25pt; font-weight: 600; }
 .t-ledger .r-headline { font-size: 11.25pt; font-style: italic; }
 .t-ledger .r-contact { margin-top: 3pt; }
 .t-ledger .r-sec-title {
   display: flex; align-items: center; gap: 9pt;
   /* Real capitals, not font-variant: small-caps. The bundled font has no true small caps, so the
      browser fakes them glyph by glyph and PDF text then reads "e d u c a t i o n". */
-  font-size: 8.75pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+  font-size: 8.75pt; font-weight: 600;
   color: var(--accent);
 }
 .t-ledger .r-sec-title::before, .t-ledger .r-sec-title::after { content: ""; flex: 1; height: 0.75pt; background: #cfcfcf; }
@@ -152,13 +159,12 @@
   line-height: 1.5;
 }
 .t-atlas .r-head { background: var(--tint); border-radius: 6pt; padding: 16pt 18pt 14pt; gap: 6pt; margin-bottom: calc(18pt * var(--sp)); }
-/* Tracking tighter than -0.015em makes PDF text lose the space: "AisyahRahman". */
-.t-atlas .r-name { font-size: 25pt; font-weight: 800; letter-spacing: -0.01em; word-spacing: 0.05em; color: var(--accent); }
+.t-atlas .r-name { font-size: 25pt; font-weight: 800; color: var(--accent); }
 .t-atlas .r-headline { font-size: 11.25pt; font-weight: 600; color: var(--ink); }
 .t-atlas .r-contact { color: #404040; }
 .t-atlas .r-sec-title {
   display: flex; flex-direction: column; gap: 4pt;
-  font-size: 9.75pt; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+  font-size: 9.75pt; font-weight: 800;
 }
 .t-atlas .r-sec-title::after { content: ""; width: 21pt; height: 2.25pt; border-radius: 2pt; background: var(--accent); }
 .t-atlas .r-entry {
@@ -186,14 +192,14 @@
   color: #222;
 }
 .t-quiet .r-head { gap: 8pt; margin-bottom: calc(18pt * var(--sp)); }
-.t-quiet .r-name { font-size: 21pt; font-weight: 500; letter-spacing: -0.01em; color: #111; }
+.t-quiet .r-name { font-size: 21pt; font-weight: 500; color: #111; }
 .t-quiet .r-headline { font-size: 10.5pt; color: var(--ink-3); }
 .t-quiet .r-contact { color: var(--ink-3); }
 .t-quiet .r-contact a { color: var(--accent); }
-.t-quiet .r-sec + .r-sec { margin-top: calc(18pt * var(--sp)); }
+.t-quiet .r-sec + .r-sec { padding-top: calc(18pt * var(--sp)); }
 .t-quiet .r-sec-title { font-size: 9pt; font-weight: 600; color: var(--accent); margin-bottom: calc(6pt * var(--sp)); }
 .t-quiet .r-entry { display: flex; flex-wrap: wrap; column-gap: 0; }
-.t-quiet .r-entry + .r-entry, .t-quiet .r-keep + .r-entry { margin-top: calc(11pt * var(--sp)); }
+.t-quiet .r-entry + .r-entry, .t-quiet .r-keep + .r-entry { padding-top: calc(11pt * var(--sp)); }
 .t-quiet .r-title { flex-basis: 100%; font-size: 10.5pt; font-weight: 600; color: #111; }
 .t-quiet .r-meta { font-size: 9pt; color: var(--ink-3); }
 .t-quiet .r-meta + .r-meta::before { content: "·"; margin: 0 5pt; }

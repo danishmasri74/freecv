@@ -1,4 +1,5 @@
-# Build the minified site and print every template to PDF to check ATS-safe output.
+# Build the minified site, print every template to PDF to check ATS-safe output,
+# and check the on-screen page preview matches the printed PDF on A4 and Letter.
 name: Build and PDF check
 
 on:
@@ -12,7 +13,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

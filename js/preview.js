@@ -109,9 +109,17 @@
       '</div>';
   }
 
+  // Templates whose headings are capitals. The capitals are real text, not CSS
+  // text-transform: Firefox prints CSS-uppercased text one letter at a time, which an
+  // ATS reads as "S U M M A R Y".
+  var CAPITAL_HEADINGS = { harbor: true, ledger: true, atlas: true };
+  var capitalHeadings = false;
+
   function renderSection(sec) {
     if (sec.hidden) return '';
-    var title = '<h2 class="r-sec-title">' + esc(t(sec.title)) + '</h2>';
+    var heading = t(sec.title);
+    if (capitalHeadings) heading = heading.toLocaleUpperCase();
+    var title = '<h2 class="r-sec-title">' + esc(heading) + '</h2>';
     var cls = 'r-sec r-sec-' + sec.type;
 
     if (sec.type === 'summary') {
@@ -155,6 +163,7 @@
         '</header>';
     }
 
+    capitalHeadings = !!CAPITAL_HEADINGS[data.settings && data.settings.template];
     var body = head + data.sections.map(renderSection).join('');
     return body || '<p class="r-empty">Your resume preview appears here as you type.</p>';
   };

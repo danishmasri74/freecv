@@ -7,8 +7,9 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
-    "test": "node tests/pdf.test.mjs",
-    "check": "npm run build && npm test"
+    "test": "node tests/pdf.test.mjs && node tests/pagination.test.mjs",
+    "check": "npm run build && npm test",
+    "test:quick": "node tests/pdf.test.mjs && node tests/pagination.test.mjs --quick"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",
