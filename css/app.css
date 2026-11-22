@@ -366,9 +366,16 @@ summary { list-style: none; }
   transform-origin: top left;
 }
 .sheet.paper-letter { --page-w: 8.5in; --page-h: 11in; }
-.guides { position: absolute; inset: 0; pointer-events: none; }
-.guide { position: absolute; left: 0; right: 0; border-top: 1px dashed #d98a95; }
-.guide span { position: absolute; right: 6px; top: 2px; font: 600 10px/1 var(--font); color: #b3404f; background: #fff; padding: 2px 4px; }
+
+/* Off-screen print source: measured to paginate the preview, printed as the real document. */
+.print-source { position: absolute; left: -10000px; top: 0; visibility: hidden; box-shadow: none; min-height: 0; pointer-events: none; }
+
+/* Preview: real pages, stacked like a PDF viewer. */
+.pages { width: max-content; display: flex; flex-direction: column; align-items: center; transform-origin: top left; }
+.page-sheet { height: var(--page-h); min-height: 0; overflow: hidden; }
+.page-sheet.is-tall { height: auto; min-height: var(--page-h); overflow: visible; }
+.page-label { margin: 10px 0 0; font-family: var(--font); color: var(--muted); text-align: center; }
+.page-wrap + .page-wrap { margin-top: 28px; }
 
 /* ---------- Form ---------- */
 
@@ -581,8 +588,9 @@ textarea.input.share-link {
 
 @media print {
   html, body { height: auto; overflow: visible !important; background: #fff !important; display: block; }
-  .topbar, .tabs, .outline, .editor, .design-toolbar, .toast, .guides, dialog { display: none !important; }
-  .workspace, .preview { display: block !important; overflow: visible !important; padding: 0 !important; margin: 0 !important; background: #fff !important; }
-  .sheet-frame { width: auto !important; height: auto !important; margin: 0 !important; }
-  .sheet { transform: none !important; width: auto !important; min-height: 0 !important; padding: 0 !important; box-shadow: none !important; }
+  .topbar, .tabs, .workspace, .toast, dialog { display: none !important; }
+  .print-source {
+    position: static !important; left: auto !important; visibility: visible !important;
+    width: auto !important; min-height: 0 !important; padding: 0 !important; box-shadow: none !important;
+  }
 }

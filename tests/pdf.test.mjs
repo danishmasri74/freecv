@@ -43,7 +43,9 @@ async function pdfText(buffer) {
   let text = '';
   for (let i = 1; i <= doc.numPages; i++) {
     const tc = await (await doc.getPage(i)).getTextContent();
-    text += tc.items.map((it) => it.str + (it.hasEOL ? '\n' : '')).join('') + '\n';
+    // Join pieces with a space, as gap-based extractors (and many ATS) do. Joining with '' would
+    // hide letters the PDF stores one by one, e.g. faked small caps reading "S U M M A R Y".
+    text += tc.items.map((it) => it.str + (it.hasEOL ? '\n' : '')).join(' ') + '\n';
   }
   return { pages: doc.numPages, text };
 }
@@ -61,9 +63,10 @@ async function sample() {
 
 // Seed storage BEFORE the app starts (seeding after load would be overwritten by the app's
 // save-on-exit when the page reloads), then open the app.
-async function loadExample(page, template) {
+async function loadExample(page, template, extend) {
   const data = JSON.parse(JSON.stringify(await sample()));
   data.settings.template = template;
+  if (extend) extend(data);
   await page.addInitScript((json) => {
     if (sessionStorage.getItem('freecv-test-seeded')) return; // only on the first load
     sessionStorage.setItem('freecv-test-seeded', '1');
@@ -125,6 +128,45 @@ try {
     const spaced = flat.match(/\b(?:[A-Za-z] ){4,}[A-Za-z]\b/);
     check('no letter-spaced words in the PDF text', !spaced, spaced && `found "${spaced[0]}"`);
     check('app UI does not leak into the PDF', !/Download PDF|Add section|Personal details/.test(flat));
+    await page.close();
+  }
+
+  // The preview's pages must match the printed PDF page for page (count and where each page starts/ends).
+  for (const tpl of TEMPLATES) {
+    console.log(`\npreview pages = PDF pages (${tpl}, longer resume)`);
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    page.on('pageerror', (e) => errors.push(`${tpl} pages: ${e.message}`));
+    await loadExample(page, tpl, (data) => {
+      const exp = data.sections.find((s) => s.type === 'experience');
+      for (let i = 0; i < 3; i++) {
+        exp.items.push({ id: 'x' + i, role: `Software Engineer ${i + 1}`, org: `Company ${i + 1}`, location: 'Penang', start: '2016', end: '2018',
+          bullets: Array(4).fill(`Delivered improvement number ${i + 1} that moved a key product metric by a clear, measurable amount`).join('\n') });
+      }
+    });
+    const preview = await page.evaluate(() => [...document.querySelectorAll('#pages .page-sheet')].map((p) => {
+      const lines = p.innerText.split('\n').map((l) => l.trim()).filter(Boolean);
+      return { first: lines[0], last: lines[lines.length - 1] };
+    }));
+    const pdfPages = [];
+    {
+      const doc = await getDocument({ data: new Uint8Array(await page.pdf({ preferCSSPageSize: true, printBackground: true })), verbosity: 0 }).promise;
+      for (let i = 1; i <= doc.numPages; i++) {
+        const tc = await (await doc.getPage(i)).getTextContent();
+        pdfPages.push(tc.items.map((it) => it.str).join(' ').replace(/\s+/g, ' '));
+      }
+    }
+    check('resume runs past one page (test setup)', preview.length > 1, `${preview.length} preview page(s)`);
+    check('preview shows as many pages as the PDF has', preview.length === pdfPages.length, `preview ${preview.length}, PDF ${pdfPages.length}`);
+    const norm = (t) => (t || '').replace(/\s+/g, ' ').toLowerCase(); // Ledger's small caps print as capitals
+    preview.forEach((pg, i) => {
+      const pdf = (pdfPages[i] || '').toLowerCase();
+      check(`page ${i + 1} starts and ends on the same lines as the PDF`, pdf.includes(norm(pg.first)) && pdf.includes(norm(pg.last)),
+        `preview page ${i + 1}: "${pg.first}" … "${pg.last}"\n      PDF page ${i + 1}: "${pdf.slice(0, 70)}" … "${pdf.slice(-60)}"`);
+    });
+    const spacedAll = pdfPages.join(' ').match(/\b(?:[A-Za-z] ){4,}[A-Za-z]\b/);
+    check('no letter-spaced words on any page', !spacedAll, spacedAll && `found "${spacedAll[0]}"`);
+    const meta = (await page.textContent('#preview-meta')).trim();
+    check('toolbar page count matches', meta.startsWith(`${pdfPages.length} pages`), meta);
     await page.close();
   }
 

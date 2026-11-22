@@ -118,7 +118,7 @@
 .t-harbor .r-skill-sep { display: none; }
 .t-harbor .r-skill-list, .t-quiet .r-skill-list { grid-column: 2; }
 
-/* ---------- Ledger: refined serif, centred header, small-caps rules ---------- */
+/* ---------- Ledger: refined serif, centred header, capital headings between rules ---------- */
 
 .t-ledger {
   font-family: "Source Serif 4", Charter, "Sitka Text", Cambria, Georgia, serif;
@@ -132,7 +132,9 @@
 .t-ledger .r-contact { margin-top: 3pt; }
 .t-ledger .r-sec-title {
   display: flex; align-items: center; gap: 9pt;
-  font-size: 10.5pt; font-weight: 600; font-variant: small-caps; letter-spacing: 0.06em;
+  /* Real capitals, not font-variant: small-caps. The bundled font has no true small caps, so the
+     browser fakes them glyph by glyph and PDF text then reads "e d u c a t i o n". */
+  font-size: 8.75pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
   color: var(--accent);
 }
 .t-ledger .r-sec-title::before, .t-ledger .r-sec-title::after { content: ""; flex: 1; height: 0.75pt; background: #cfcfcf; }

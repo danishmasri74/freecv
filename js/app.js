@@ -13,7 +13,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var els = {
     editor: $('editor'), outline: $('outline-list'), resume: $('resume'), sheet: $('sheet'), frame: $('sheet-frame'),
-    preview: $('preview'), guides: $('guides'), meta: $('preview-meta'), workspace: $('workspace'),
+    preview: $('preview'), pages: $('pages'), meta: $('preview-meta'), workspace: $('workspace'),
     templateSeg: $('template-seg'), paperSeg: $('paper-seg'), swatches: $('swatches'), pageStyle: $('page-style'),
     saveStatus: $('save-status'), toast: $('toast'), toastText: $('toast-text'), toastAction: $('toast-action'),
     file: $('file-import'), dlgPrint: $('dlg-print'), dlgAbout: $('dlg-about'),
@@ -259,42 +259,103 @@
   var MARGIN_MM = 15;
   function contentHeight() { return (paperDims().h - 2 * MARGIN_MM) * MM; }
 
-  // How many pages the resume needs right now (measured unscaled; includes the text-size zoom).
-  function measurePages() {
-    els.sheet.style.transform = '';
-    var h = els.resume.getBoundingClientRect().height;
-    return Math.max(1, Math.ceil((h - 2) / contentHeight()));
+  /*
+   * Pagination. The off-screen print source (#resume) is one flowing document. Print keeps
+   * the header, each .r-keep (a heading + its first entry, or a whole small section) and each
+   * .r-entry on one page, so those are our unbreakable blocks. A block that would run past the
+   * bottom of the page starts the next one, exactly like the browser does when printing.
+   */
+  function blocksOf(article) {
+    var out = [];
+    Array.prototype.forEach.call(article.children, function (el) {
+      if (el.tagName === 'SECTION' && !el.classList.contains('r-keep')) {
+        Array.prototype.forEach.call(el.children, function (c) { out.push({ el: c, section: el }); });
+      } else {
+        out.push({ el: el, section: null });
+      }
+    });
+    return out;
   }
 
-  // Fit the paper to the preview column and draw approximate page-break lines.
+  // Returns an array of pages, each an array of blocks (measured with the current text size and spacing).
+  function computePages() {
+    var top0 = els.resume.getBoundingClientRect().top;
+    var limit = contentHeight() + 0.5; // half a pixel of slack for rounding
+    var pages = [], start = 0;
+    blocksOf(els.resume).forEach(function (b) {
+      var r = b.el.getBoundingClientRect();
+      b.top = r.top - top0;
+      b.bottom = r.bottom - top0;
+      if (!pages.length || b.bottom - start > limit) { pages.push([]); start = b.top; }
+      pages[pages.length - 1].push(b);
+    });
+    return pages.length ? pages : [[]];
+  }
+  function countPages() { return computePages().length; }
+
+  // Build the visible page sheets from clones of the measured blocks.
+  function buildPages(pages) {
+    var frag = document.createDocumentFragment();
+    var sheetClass = els.sheet.className.replace('print-source', '').trim() + ' page-sheet';
+    var limit = contentHeight() + 0.5;
+    pages.forEach(function (blocks, i) {
+      var wrap = document.createElement('div');
+      wrap.className = 'page-wrap';
+      var sheet = document.createElement('div');
+      sheet.className = sheetClass;
+      var art = els.resume.cloneNode(false); // same template class and --accent / --sp / --zoom
+      art.removeAttribute('id');
+      if (!blocks.length) art.innerHTML = els.resume.innerHTML; // empty-state hint
+      var lastSection = null, sectionClone = null;
+      blocks.forEach(function (b) {
+        if (!b.section) { art.appendChild(b.el.cloneNode(true)); lastSection = null; return; }
+        // A section that continues from the previous page gets a fresh wrapper (no heading repeated).
+        if (b.section !== lastSection) {
+          sectionClone = b.section.cloneNode(false);
+          art.appendChild(sectionClone);
+          lastSection = b.section;
+        }
+        sectionClone.appendChild(b.el.cloneNode(true));
+      });
+      // One block taller than a whole page (very rare): let the sheet grow rather than hide text.
+      if (blocks.length && blocks[blocks.length - 1].bottom - blocks[0].top > limit) sheet.classList.add('is-tall');
+      sheet.appendChild(art);
+      wrap.appendChild(sheet);
+      if (pages.length > 1) {
+        var label = document.createElement('p');
+        label.className = 'page-label';
+        label.textContent = 'Page ' + (i + 1) + ' of ' + pages.length;
+        wrap.appendChild(label);
+      }
+      frag.appendChild(wrap);
+    });
+    els.pages.replaceChildren(frag);
+  }
+
+  // Paginate, draw the pages scaled to the preview column, and update the page count.
   var lastPages = 1;
   function layoutSheet() {
-    if (!els.preview.offsetParent) return; // hidden (mobile edit tab)
-    var d = paperDims(), m = MARGIN_MM;
-    var sheet = els.sheet;
-    var pages = measurePages();
-    var sheetW = sheet.offsetWidth;
-    var contentH = contentHeight();
-    lastPages = pages;
+    var pages = computePages();
+    lastPages = pages.length;
 
-    sheet.style.minHeight = (pages * d.h) + 'mm';
-    var guides = '';
-    for (var i = 1; i < pages; i++) {
-      guides += '<div class="guide" style="top:' + (m * MM + i * contentH) + 'px"><span>Page ' + (i + 1) + '</span></div>';
+    if (els.preview.offsetParent) { // skip drawing while the preview is hidden (phone Edit tab)
+      buildPages(pages);
+      els.pages.style.transform = '';
+      var w = els.pages.offsetWidth;
+      var cs = getComputedStyle(els.preview);
+      var avail = els.preview.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      var scale = Math.min(1, avail / w);
+      // Keep the "Page 1 of 2" labels a readable size whatever the zoom.
+      els.pages.querySelectorAll('.page-label').forEach(function (l) { l.style.fontSize = (12 / scale) + 'px'; });
+      els.pages.style.transform = scale < 1 ? 'scale(' + scale + ')' : '';
+      els.frame.style.width = (w * scale) + 'px';
+      els.frame.style.height = (els.pages.offsetHeight * scale) + 'px';
     }
-    els.guides.innerHTML = guides;
 
-    var cs = getComputedStyle(els.preview);
-    var avail = els.preview.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-    var scale = Math.min(1, avail / sheetW);
-    sheet.style.transform = scale < 1 ? 'scale(' + scale + ')' : '';
-    els.frame.style.width = (sheetW * scale) + 'px';
-    els.frame.style.height = (sheet.offsetHeight * scale) + 'px';
-
-    els.meta.classList.toggle('is-over', pages > 1);
-    els.meta.innerHTML = '<span title="' + (pages > 1 ? 'Dashed lines on the page show roughly where pages break' : '') + '">' +
-      pages + ' page' + (pages > 1 ? 's' : '') + '</span>' +
-      (pages > 1 ? '<button type="button" class="fit-btn" data-fit>Fit to 1 page</button>' : '');
+    var n = pages.length;
+    els.meta.classList.toggle('is-over', n > 1);
+    els.meta.innerHTML = '<span>' + n + ' page' + (n > 1 ? 's' : '') + '</span>' +
+      (n > 1 ? '<button type="button" class="fit-btn" data-fit>Fit to 1 page</button>' : '');
   }
 
   /* ---------- Spacing, text size, fit to one page ---------- */
@@ -310,7 +371,7 @@
   function fitToOnePage() {
     var s = state.settings;
     var before = { spacing: s.spacing, size: s.size };
-    var fits = function () { applyScale(); return measurePages() === 1; };
+    var fits = function () { applyScale(); return countPages() === 1; };
     var ok = false;
 
     var spacings = FreeCV.SPACINGS.map(function (p) { return p.value; })

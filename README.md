@@ -65,7 +65,7 @@ Scripts are plain `<script>` files that share a `window.FreeCV` namespace (not E
 | Template | Font | Look |
 | --- | --- | --- |
 | Harbor (default) | Source Sans 3 | Split header, dates in a left gutter, ink-first |
-| Ledger | Source Serif 4 | Centred header, double rule, small-caps headings |
+| Ledger | Source Serif 4 | Centred header, double rule, capital headings between rules |
 | Atlas | Manrope | Tinted header panel, accent company names |
 | Quiet | IBM Plex Sans | Minimal, one grey meta line per entry |
 
@@ -76,6 +76,7 @@ Scripts are plain `<script>` files that share a `window.FreeCV` namespace (not E
 - Backups from older versions map `classic` → Ledger, `modern` → Harbor, `minimal` → Quiet (see `normalize` in `data.js`).
 - Don't track names tighter than about `-0.015em`: PDF text then loses the space and reads `AisyahRahman`.
 - `.r-entry` and `.r-keep` use `break-inside: avoid`, so entries and section headings never split across pages.
+- Don't use `font-variant: small-caps`: the bundled fonts have no real small caps, so browsers fake them letter by letter and PDF text reads `e d u c a t i o n`.
 - Keep uppercase heading `letter-spacing` at **0.1em or less**. Wider tracking makes PDF text extract as `S U M M A R Y`.
 - Page margins come from `@page { margin: 15mm }`, which `app.js` rewrites when the paper size changes.
 

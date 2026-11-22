@@ -167,13 +167,16 @@
         <span class="tool-pages" id="preview-meta"></span>
       </div>
       <div class="sheet-frame" id="sheet-frame">
-        <div class="sheet" id="sheet">
-          <article class="resume t-harbor" id="resume"></article>
-          <div class="guides" id="guides" aria-hidden="true"></div>
-        </div>
+        <div class="pages" id="pages"></div>
       </div>
     </section>
   </main>
+
+  <!-- The resume as one flowing document. Hidden on screen, where it is measured and cut into the
+       preview's pages; printed as-is, so the browser paginates the PDF with the same break rules. -->
+  <div class="sheet print-source" id="sheet" aria-hidden="true">
+    <article class="resume t-harbor" id="resume"></article>
+  </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden>
     <span id="toast-text"></span>
